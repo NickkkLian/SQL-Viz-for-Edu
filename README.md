@@ -6,6 +6,8 @@ but every action shows the exact SQL query running behind the scenes.
 Built for educational purposes to help students connect what they learn in class
 to what SQL actually looks like in practice.
 
+![SQL-Viz-for-Edu](docs/screenshot.png)
+
 ## How it works
 
 - Pick one or more tables from the left panel
