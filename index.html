@@ -808,6 +808,17 @@ async function init(){
   fadeOut('ld');
   setStatus('ok','Ready');
   renderSidebar('hospital');
+  // Deep link: ?db=movies&tables=film,director pre-selects a database and tables,
+  // so a specific view can be shared with students (or screenshotted) without clicking.
+  try{
+    const q=new URLSearchParams(location.search);
+    const db=q.get('db');
+    if(db&&DDL[db]&&db!==currentDB) switchDB(db);
+    (q.get('tables')||'').split(',').map(s=>s.trim()).filter(Boolean).forEach(t=>{
+      const tbl=SCHEMA[currentDB].tables[t];
+      if(tbl&&!tbl.bridge&&!selectedTables.has(t)) toggleTable(t);
+    });
+  }catch(e){}
 }
 
 function qdb(name,sql){
