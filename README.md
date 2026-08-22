@@ -8,6 +8,9 @@ to what SQL actually looks like in practice.
 
 ![SQL-Viz-for-Edu](docs/screenshot.png)
 
+Share a specific view with a link: `?db=movies&tables=film,director` pre-selects the database
+and tables (table keys are the ones used in the schema, e.g. `patient`, `order_hdr`, `film`).
+
 ## How it works
 
 - Pick one or more tables from the left panel
