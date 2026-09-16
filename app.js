@@ -282,7 +282,8 @@ function resultTable(res, opts = {}) {
         col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, c) : c);
     }))),
     h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, r.map(cellNode)))
-      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length || 1 }, 'No rows match — loosen a condition above.'))),
+      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length || 1 }, h('b', {}, 'No rows match'), ' — loosen a condition above',
+          opts.sortable && state.filters.length ? [', or ', h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')] : '.'))),
     res.rows.length > limit ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
 }
 let colsOpen = false;
