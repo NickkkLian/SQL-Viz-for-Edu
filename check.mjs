@@ -5,11 +5,12 @@
 // re-hashes the vendored sql.js files. `node check.mjs --break` flips two fixtures and must go red.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const ROOT = path.dirname(new URL(import.meta.url).pathname);
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const BREAK = process.argv.includes('--break');
 const Q = require(path.join(ROOT, 'engine.js'));
 
