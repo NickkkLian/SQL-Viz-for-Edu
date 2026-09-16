@@ -301,12 +301,14 @@ function resultTable(res, opts = {}) {
   const limit = opts.limit || Infinity; const mark = opts.mark || {};
   const miss = new Set(mark.miss || []), extra = new Set(mark.extra || []);
   const rows = res.rows.slice(0, limit);
+  // a column whose values are all numbers is right-aligned in the header too, like its cells (family tables, v3 Q7)
+  const numeric = res.columns.map((_, j) => { const vals = res.rows.map(r => r[j]).filter(v => v !== null && v !== undefined); return vals.length > 0 && vals.every(v => typeof v === 'number'); });
   return h('table', { class: 'data' + (opts.compact ? ' compact' : '') },
-    h('thead', {}, h('tr', {}, res.columns.map(c => {
-      if (!opts.sortable) return h('th', { scope: 'col' }, c);
+    h('thead', {}, h('tr', {}, res.columns.map((c, j) => {
+      if (!opts.sortable) return h('th', { scope: 'col', class: numeric[j] ? 'num' : null }, c);
       const col = cols().find(x => x.label === c);
       const active = col && state.sort && state.sort.col === col.id;
-      return h('th', { scope: 'col', 'aria-sort': active ? (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : null },
+      return h('th', { scope: 'col', class: numeric[j] ? 'num' : null, 'aria-sort': active ? (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : null },
         col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, c) : c);
     }))),
     h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, r.map(cellNode)))
