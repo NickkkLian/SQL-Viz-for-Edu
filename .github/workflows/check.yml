@@ -1,0 +1,60 @@
+name: check
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: node check.mjs
+        run: node check.mjs
+
+  break:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: check.mjs --break must fail
+        run: |
+          if node check.mjs --break; then
+            echo "::error::--break passed; the fixture checks are not actually running"
+            exit 1
+          fi
+          echo "--break failed as it must"
+
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: engine.js reproduces the original explorer's SQL
+        run: |
+          git show 5316da6:index.html > "$RUNNER_TEMP/explorer-5316da6.html"
+          node tests/parity.mjs "$RUNNER_TEMP/explorer-5316da6.html"
+
+  hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: vendored engine is present and whole
+        run: |
+          test -f vendor/sql-wasm.js && test -f vendor/sql-wasm.wasm && test -f vendor/sql-wasm-b64.js
+          sha256sum -c - <<'SUMS'
+          3358bb12892642698c0804c85cba48de562bc2de324fe58a422f282832c79c01  vendor/sql-wasm.js
+          4c1c978826062f7b1bb6cc811503863b01415175d0e6dd9ce8a30a81a02c0afb  vendor/sql-wasm.wasm
+          SUMS
