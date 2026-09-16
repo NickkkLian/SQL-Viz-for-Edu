@@ -29,6 +29,8 @@ let lastSQL = '', lastResult = null, lastError = null;
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
 
 // ── helpers ──
+// Table cards show the row count SQLite reports for the loaded data, not a number typed into the schema.
+const ROWCOUNT = {};
 function exec(db, sql) { const r = dbs[db].exec(sql); return r.length ? { columns: r[0].columns, rows: r[0].values } : { columns: [], rows: [] }; }
 function toast(msg, opts = {}) {
   const t = h('div', { class: 'toast enter', role: opts.alert ? 'alert' : 'status' }, msg);
@@ -136,7 +138,7 @@ function renderTables() {
       const on = state.tables.includes(t);
       return h('li', {}, h('label', { class: on ? 'on' : '' },
         h('input', { type: 'checkbox', checked: on, onchange: () => toggleTable(t), 'aria-label': sc.tables[t].label }),
-        h('span', {}, sc.tables[t].label), h('span', { class: 'cnt' }, sc.tables[t].rows + ' rows')));
+        h('span', {}, sc.tables[t].label), h('span', { class: 'cnt' }, (ROWCOUNT[state.db] && ROWCOUNT[state.db][t] != null ? ROWCOUNT[state.db][t] : '…') + ' rows')));
     }),
     bridges.length ? h('li', {}, h('div', { class: 'sect' }, 'Joined automatically')) : null,
     bridges.map(t => h('li', {}, h('div', { class: 'bridge', style: 'display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--space-2);align-items:center;height:32px;padding:0 var(--space-2);font-size:var(--text-sm)' },
@@ -342,6 +344,7 @@ async function boot() {
       const bar = $('#ldbar'); if (bar) bar.style.width = ((i + 1) / names.length * 100) + '%';
       await new Promise(r => setTimeout(r, 0));
     }
+    for (const db of names) { ROWCOUNT[db] = {}; for (const tbl of Object.keys((Q.SCHEMA[db] || {}).tables || {})) { try { ROWCOUNT[db][tbl] = dbs[db].exec(`SELECT COUNT(*) FROM ${tbl}`)[0].values[0][0]; } catch (e) { ROWCOUNT[db][tbl] = null; console.error('count', db, tbl, e); } } }
     ready = true; update();
   } catch (e) {
     console.error(e);
