@@ -1,0 +1,986 @@
+{
+ "generated": "by parity harness against the original explorer (commit 5316da6)",
+ "engine": "2.0.0",
+ "fixtures": [
+  {
+   "id": "h01",
+   "note": "single table, defaults",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "patient"
+    ],
+    "cols": [
+     "pa_name",
+     "pa_dob",
+     "pa_gender",
+     "pa_city",
+     "pa_country"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\" FROM patient pa",
+   "rows": 20,
+   "columns": 5
+  },
+  {
+   "id": "h02",
+   "note": "two tables joined through appointment (bridge)",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "patient",
+     "doctor"
+    ],
+    "cols": [
+     "pa_name",
+     "pa_dob",
+     "pa_gender",
+     "pa_city",
+     "pa_country",
+     "dr_name",
+     "dr_spec",
+     "dr_target",
+     "ap_date",
+     "ap_diag",
+     "ap_fee"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\", dr.first_name||' '||dr.last_name AS \"Doctor Name\", dr.specialty AS \"Specialty\", dr.target_patients AS \"Patient Target\", ap.appt_date AS \"Appt Date\", ap.diagnosis AS \"Diagnosis\", ap.fee AS \"Fee ($)\" FROM patient pa INNER JOIN appointment ap ON ap.patient_id = pa.patient_id INNER JOIN doctor dr ON ap.doctor_id  = dr.doctor_id",
+   "rows": 38,
+   "columns": 11
+  },
+  {
+   "id": "h03",
+   "note": "text equals + number greater",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "appointment",
+     "doctor"
+    ],
+    "cols": [
+     "ap_date",
+     "ap_diag",
+     "ap_fee",
+     "dr_name",
+     "dr_spec",
+     "dr_target"
+    ],
+    "filters": [
+     {
+      "col": "dr_spec",
+      "op": "equals",
+      "val": "Cardiology"
+     },
+     {
+      "col": "ap_fee",
+      "op": "is more than",
+      "val": "150"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT ap.appt_date AS \"Appt Date\", ap.diagnosis AS \"Diagnosis\", ap.fee AS \"Fee ($)\", dr.first_name||' '||dr.last_name AS \"Doctor Name\", dr.specialty AS \"Specialty\", dr.target_patients AS \"Patient Target\" FROM appointment ap INNER JOIN doctor dr ON ap.doctor_id  = dr.doctor_id WHERE dr.specialty='Cardiology' AND ap.fee>150",
+   "rows": 5,
+   "columns": 6
+  },
+  {
+   "id": "h04",
+   "note": "sort desc + limit 10",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "appointment"
+    ],
+    "cols": [
+     "ap_date",
+     "ap_diag",
+     "ap_fee"
+    ],
+    "filters": [],
+    "sort": {
+     "col": "ap_fee",
+     "dir": "DESC"
+    },
+    "limit": "10",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT ap.appt_date AS \"Appt Date\", ap.diagnosis AS \"Diagnosis\", ap.fee AS \"Fee ($)\" FROM appointment ap ORDER BY ap.fee DESC LIMIT 10",
+   "rows": 10,
+   "columns": 3
+  },
+  {
+   "id": "h05",
+   "note": "group by specialty, COUNT(*) default",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "doctor",
+     "appointment"
+    ],
+    "cols": [
+     "dr_spec"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": {
+     "col": "dr_spec",
+     "aggs": {},
+     "having": []
+    },
+    "distinct": false
+   },
+   "sql": "SELECT dr.specialty AS \"Specialty\", COUNT(*) AS \"Count\" FROM doctor dr INNER JOIN appointment ap ON ap.doctor_id  = dr.doctor_id GROUP BY dr.specialty",
+   "rows": 5,
+   "columns": 2
+  },
+  {
+   "id": "h06",
+   "note": "group by specialty with SUM/AVG of fee + HAVING",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "doctor",
+     "appointment"
+    ],
+    "cols": [
+     "dr_spec",
+     "ap_fee"
+    ],
+    "filters": [],
+    "sort": {
+     "col": "ap_fee",
+     "dir": "DESC"
+    },
+    "limit": "All",
+    "group": {
+     "col": "dr_spec",
+     "aggs": {
+      "ap_fee": "SUM"
+     },
+     "having": [
+      {
+       "aggCol": "ap_fee|SUM",
+       "op": "is more than",
+       "val": "500"
+      }
+     ]
+    },
+    "distinct": false
+   },
+   "sql": "SELECT dr.specialty AS \"Specialty\", SUM(ap.fee) AS \"Total of Fee ($)\" FROM doctor dr INNER JOIN appointment ap ON ap.doctor_id  = dr.doctor_id GROUP BY dr.specialty HAVING SUM(ap.fee)>500 ORDER BY ap.fee DESC",
+   "rows": 5,
+   "columns": 2
+  },
+  {
+   "id": "h07",
+   "note": "quote escaping in a text filter",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "patient"
+    ],
+    "cols": [
+     "pa_name",
+     "pa_dob",
+     "pa_gender",
+     "pa_city",
+     "pa_country"
+    ],
+    "filters": [
+     {
+      "col": "pa_name",
+      "op": "contains",
+      "val": "O'Brien"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\" FROM patient pa WHERE pa.first_name||' '||pa.last_name LIKE '%O''Brien%'",
+   "rows": 0,
+   "columns": 0
+  },
+  {
+   "id": "h08",
+   "note": "is blank / has a value",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "patient"
+    ],
+    "cols": [
+     "pa_name",
+     "pa_dob",
+     "pa_gender",
+     "pa_city",
+     "pa_country"
+    ],
+    "filters": [
+     {
+      "col": "pa_city",
+      "op": "is blank",
+      "val": ""
+     },
+     {
+      "col": "pa_country",
+      "op": "has a value",
+      "val": ""
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\" FROM patient pa WHERE (pa.city IS NULL OR CAST(pa.city AS TEXT)='') AND (pa.country IS NOT NULL AND CAST(pa.country AS TEXT)!='')",
+   "rows": 0,
+   "columns": 0
+  },
+  {
+   "id": "h09",
+   "note": "hidden id column made visible",
+   "state": {
+    "db": "hospital",
+    "tables": [
+     "patient"
+    ],
+    "cols": [
+     "pa_id",
+     "pa_name"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pa.patient_id AS \"Patient ID\", pa.first_name||' '||pa.last_name AS \"Name\" FROM patient pa",
+   "rows": 20,
+   "columns": 2
+  },
+  {
+   "id": "e01",
+   "note": "three tables + implied bridge order_item",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "product",
+     "customer",
+     "order_hdr"
+    ],
+    "cols": [
+     "pr_name",
+     "pr_cat",
+     "pr_stk",
+     "pr_price",
+     "cu_name",
+     "cu_email",
+     "cu_city",
+     "cu_country",
+     "oh_id",
+     "oh_date",
+     "oh_status",
+     "oi_qty",
+     "oi_price",
+     "oi_total"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pr.prod_name AS \"Product Name\", pr.category AS \"Category\", pr.stock_qty AS \"Stock Qty\", pr.unit_price AS \"Unit Price ($)\", cu.first_name||' '||cu.last_name AS \"Name\", cu.email AS \"Email\", cu.city AS \"City\", cu.country AS \"Country\", oh.order_id AS \"Order ID\", oh.order_date AS \"Order Date\", oh.status AS \"Status\", oi.quantity AS \"Quantity\", oi.price_charged AS \"Price Charged ($)\", ROUND(oi.quantity*oi.price_charged,2) AS \"Line Total ($)\" FROM product pr INNER JOIN order_item oi ON oi.prod_id   = pr.prod_id INNER JOIN order_hdr oh ON oi.order_id  = oh.order_id INNER JOIN customer cu ON oh.cust_id   = cu.cust_id",
+   "rows": 11,
+   "columns": 14
+  },
+  {
+   "id": "e02",
+   "note": "start table changes join order",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "order_hdr",
+     "product"
+    ],
+    "cols": [
+     "oh_id",
+     "oh_date",
+     "oh_status",
+     "pr_name",
+     "pr_cat",
+     "pr_stk",
+     "pr_price",
+     "oi_qty",
+     "oi_price",
+     "oi_total"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT oh.order_id AS \"Order ID\", oh.order_date AS \"Order Date\", oh.status AS \"Status\", pr.prod_name AS \"Product Name\", pr.category AS \"Category\", pr.stock_qty AS \"Stock Qty\", pr.unit_price AS \"Unit Price ($)\", oi.quantity AS \"Quantity\", oi.price_charged AS \"Price Charged ($)\", ROUND(oi.quantity*oi.price_charged,2) AS \"Line Total ($)\" FROM order_hdr oh INNER JOIN order_item oi ON oi.order_id  = oh.order_id INNER JOIN product pr ON oi.prod_id   = pr.prod_id",
+   "rows": 11,
+   "columns": 10
+  },
+  {
+   "id": "e03",
+   "note": "distinct on a subset of columns",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "customer"
+    ],
+    "cols": [
+     "cu_country"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": true
+   },
+   "sql": "SELECT DISTINCT cu.country AS \"Country\" FROM customer cu",
+   "rows": 10,
+   "columns": 1
+  },
+  {
+   "id": "e04",
+   "note": "starts with + percent escaping",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "product"
+    ],
+    "cols": [
+     "pr_name",
+     "pr_cat",
+     "pr_stk",
+     "pr_price"
+    ],
+    "filters": [
+     {
+      "col": "pr_name",
+      "op": "starts with",
+      "val": "100%"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pr.prod_name AS \"Product Name\", pr.category AS \"Category\", pr.stock_qty AS \"Stock Qty\", pr.unit_price AS \"Unit Price ($)\" FROM product pr WHERE pr.prod_name LIKE '100\\%%'",
+   "rows": 0,
+   "columns": 0
+  },
+  {
+   "id": "e05",
+   "note": "number is at most / is not",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "product"
+    ],
+    "cols": [
+     "pr_name",
+     "pr_cat",
+     "pr_stk",
+     "pr_price"
+    ],
+    "filters": [
+     {
+      "col": "pr_price",
+      "op": "is at most",
+      "val": "50"
+     },
+     {
+      "col": "pr_stk",
+      "op": "is not",
+      "val": "0"
+     }
+    ],
+    "sort": {
+     "col": "pr_price",
+     "dir": "ASC"
+    },
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT pr.prod_name AS \"Product Name\", pr.category AS \"Category\", pr.stock_qty AS \"Stock Qty\", pr.unit_price AS \"Unit Price ($)\" FROM product pr WHERE pr.unit_price<=50 AND pr.stock_qty!=0 ORDER BY pr.unit_price ASC",
+   "rows": 6,
+   "columns": 4
+  },
+  {
+   "id": "e06",
+   "note": "group by category, MAX price + MIN stock, two HAVING",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "product"
+    ],
+    "cols": [
+     "pr_cat",
+     "pr_price",
+     "pr_stk"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": {
+     "col": "pr_cat",
+     "aggs": {
+      "pr_price": "MAX",
+      "pr_stk": "MIN"
+     },
+     "having": [
+      {
+       "aggCol": "pr_price|MAX",
+       "op": "is at least",
+       "val": "60"
+      },
+      {
+       "aggCol": "pr_stk|MIN",
+       "op": "is less than",
+       "val": "200"
+      }
+     ]
+    },
+    "distinct": false
+   },
+   "sql": "SELECT pr.category AS \"Category\", MIN(pr.stock_qty) AS \"Smallest of Stock Qty\", MAX(pr.unit_price) AS \"Largest of Unit Price ($)\" FROM product pr GROUP BY pr.category HAVING MAX(pr.unit_price)>=60 AND MIN(pr.stock_qty)<200",
+   "rows": 4,
+   "columns": 3
+  },
+  {
+   "id": "e07",
+   "note": "computed column (line total) with limit 25",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "order_item",
+     "product"
+    ],
+    "cols": [
+     "pr_name",
+     "oi_qty",
+     "oi_total"
+    ],
+    "filters": [],
+    "sort": {
+     "col": "oi_total",
+     "dir": "DESC"
+    },
+    "limit": "25",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT oi.quantity AS \"Quantity\", ROUND(oi.quantity*oi.price_charged,2) AS \"Line Total ($)\", pr.prod_name AS \"Product Name\" FROM order_item oi INNER JOIN product pr ON oi.prod_id   = pr.prod_id ORDER BY ROUND(oi.quantity*oi.price_charged,2) DESC LIMIT 25",
+   "rows": 11,
+   "columns": 3
+  },
+  {
+   "id": "e08",
+   "note": "group by country with non-numeric extra column",
+   "state": {
+    "db": "ecommerce",
+    "tables": [
+     "customer",
+     "order_hdr"
+    ],
+    "cols": [
+     "cu_country",
+     "oh_status"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": {
+     "col": "cu_country",
+     "aggs": {},
+     "having": []
+    },
+    "distinct": false
+   },
+   "sql": "SELECT cu.country AS \"Country\", oh.status AS \"Status\", COUNT(*) AS \"Count\" FROM customer cu INNER JOIN order_hdr oh ON oh.cust_id   = cu.cust_id GROUP BY cu.country, oh.status",
+   "rows": 7,
+   "columns": 3
+  },
+  {
+   "id": "m01",
+   "note": "film + director through cast_link bridge",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "film",
+     "director"
+    ],
+    "cols": [
+     "fi_title",
+     "fi_year",
+     "fi_rating",
+     "fi_genre",
+     "fi_box",
+     "fi_run",
+     "di_name",
+     "di_nat",
+     "di_awards",
+     "di_born",
+     "cl_contrib"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT fi.title AS \"Title\", fi.release_year AS \"Release Year\", fi.rating AS \"Rating\", fi.genre AS \"Genre\", fi.box_office_m AS \"Box Office ($M)\", fi.runtime_min AS \"Runtime (min)\", di.full_name AS \"Director Name\", di.nationality AS \"Nationality\", di.awards_won AS \"Awards Won\", di.birth_year AS \"Birth Year\", cl.contribution AS \"Contribution\" FROM film fi INNER JOIN cast_link cl ON fi.film_id     = cl.film_id INNER JOIN director di ON di.director_id = cl.director_id",
+   "rows": 29,
+   "columns": 11
+  },
+  {
+   "id": "m02",
+   "note": "LEFT JOIN edge (watch_history + genre_tag)",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "watch_history",
+     "genre_tag"
+    ],
+    "cols": [
+     "gt_name"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT gt.tag_name AS \"Tag\" FROM watch_history wh LEFT JOIN genre_tag gt ON wh.tag_id      = gt.tag_id",
+   "rows": 50,
+   "columns": 1
+  },
+  {
+   "id": "m03",
+   "note": "four tables incl. viewer, filter on membership",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "film",
+     "viewer",
+     "genre_tag"
+    ],
+    "cols": [
+     "fi_title",
+     "fi_year",
+     "fi_rating",
+     "fi_genre",
+     "fi_box",
+     "fi_run",
+     "vi_name",
+     "vi_country",
+     "vi_member",
+     "vi_year",
+     "gt_name"
+    ],
+    "filters": [
+     {
+      "col": "vi_member",
+      "op": "equals",
+      "val": "Premium"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT fi.title AS \"Title\", fi.release_year AS \"Release Year\", fi.rating AS \"Rating\", fi.genre AS \"Genre\", fi.box_office_m AS \"Box Office ($M)\", fi.runtime_min AS \"Runtime (min)\", vi.full_name AS \"Viewer Name\", vi.country AS \"Country\", vi.membership AS \"Membership\", vi.joined_year AS \"Joined Year\", gt.tag_name AS \"Tag\" FROM film fi INNER JOIN watch_history wh ON fi.film_id     = wh.film_id INNER JOIN viewer vi ON wh.viewer_id   = vi.viewer_id LEFT JOIN genre_tag gt ON wh.tag_id      = gt.tag_id WHERE vi.membership='Premium'",
+   "rows": 24,
+   "columns": 11
+  },
+  {
+   "id": "m04",
+   "note": "genre filter + rating sort + limit 50",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "film"
+    ],
+    "cols": [
+     "fi_title",
+     "fi_year",
+     "fi_rating",
+     "fi_genre",
+     "fi_box",
+     "fi_run"
+    ],
+    "filters": [
+     {
+      "col": "fi_genre",
+      "op": "equals",
+      "val": "Drama"
+     }
+    ],
+    "sort": {
+     "col": "fi_rating",
+     "dir": "DESC"
+    },
+    "limit": "50",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT fi.title AS \"Title\", fi.release_year AS \"Release Year\", fi.rating AS \"Rating\", fi.genre AS \"Genre\", fi.box_office_m AS \"Box Office ($M)\", fi.runtime_min AS \"Runtime (min)\" FROM film fi WHERE fi.genre='Drama' ORDER BY fi.rating DESC LIMIT 50",
+   "rows": 5,
+   "columns": 6
+  },
+  {
+   "id": "m05",
+   "note": "group by genre, AVG rating + COUNT box office",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "film"
+    ],
+    "cols": [
+     "fi_genre",
+     "fi_rating",
+     "fi_box"
+    ],
+    "filters": [],
+    "sort": {
+     "col": "fi_rating",
+     "dir": "DESC"
+    },
+    "limit": "All",
+    "group": {
+     "col": "fi_genre",
+     "aggs": {
+      "fi_rating": "AVG",
+      "fi_box": "COUNT"
+     },
+     "having": []
+    },
+    "distinct": false
+   },
+   "sql": "SELECT fi.genre AS \"Genre\", AVG(fi.rating) AS \"Average of Rating\", COUNT(fi.box_office_m) AS \"Count of Box Office ($M)\" FROM film fi GROUP BY fi.genre ORDER BY fi.rating DESC",
+   "rows": 8,
+   "columns": 3
+  },
+  {
+   "id": "m06",
+   "note": "director order first (start=director)",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "director",
+     "film"
+    ],
+    "cols": [
+     "di_name",
+     "fi_title"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT di.full_name AS \"Director Name\", fi.title AS \"Title\" FROM director di INNER JOIN cast_link cl ON di.director_id = cl.director_id INNER JOIN film fi ON fi.film_id     = cl.film_id",
+   "rows": 29,
+   "columns": 2
+  },
+  {
+   "id": "m07",
+   "note": "having on COUNT with equals",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "director",
+     "film"
+    ],
+    "cols": [
+     "di_name",
+     "fi_rating"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": {
+     "col": "di_name",
+     "aggs": {
+      "fi_rating": "COUNT"
+     },
+     "having": [
+      {
+       "aggCol": "fi_rating|COUNT",
+       "op": "equals",
+       "val": "2"
+      }
+     ]
+    },
+    "distinct": false
+   },
+   "sql": "SELECT di.full_name AS \"Director Name\", COUNT(fi.rating) AS \"Count of Rating\" FROM director di INNER JOIN cast_link cl ON di.director_id = cl.director_id INNER JOIN film fi ON fi.film_id     = cl.film_id GROUP BY di.full_name HAVING COUNT(fi.rating)=2",
+   "rows": 4,
+   "columns": 2
+  },
+  {
+   "id": "m08",
+   "note": "text is not + number equals",
+   "state": {
+    "db": "movies",
+    "tables": [
+     "director"
+    ],
+    "cols": [
+     "di_name",
+     "di_nat",
+     "di_awards",
+     "di_born"
+    ],
+    "filters": [
+     {
+      "col": "di_nat",
+      "op": "is not",
+      "val": "American"
+     },
+     {
+      "col": "di_awards",
+      "op": "equals",
+      "val": "4"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT di.full_name AS \"Director Name\", di.nationality AS \"Nationality\", di.awards_won AS \"Awards Won\", di.birth_year AS \"Birth Year\" FROM director di WHERE di.nationality!='American' AND di.awards_won=4",
+   "rows": 3,
+   "columns": 4
+  },
+  {
+   "id": "u01",
+   "note": "student + course through enrollment",
+   "state": {
+    "db": "university",
+    "tables": [
+     "student",
+     "course"
+    ],
+    "cols": [
+     "st_name",
+     "st_major",
+     "st_year",
+     "st_gpa",
+     "co_id",
+     "co_name",
+     "co_dept",
+     "co_cred",
+     "co_cap",
+     "en_sem",
+     "en_grade",
+     "en_score"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT st.first_name||' '||st.last_name AS \"Name\", st.major AS \"Major\", st.enrollment_year AS \"Enrollment Year\", st.gpa AS \"GPA\", co.course_id AS \"Course ID\", co.course_name AS \"Course Name\", co.department AS \"Department\", co.credits AS \"Credits\", co.max_capacity AS \"Max Capacity\", en.semester AS \"Semester\", en.grade AS \"Grade\", en.score AS \"Score\" FROM student st INNER JOIN enrollment en ON en.student_id = st.student_id INNER JOIN course co ON en.course_id  = co.course_id",
+   "rows": 38,
+   "columns": 12
+  },
+  {
+   "id": "u02",
+   "note": "group by major AVG gpa HAVING > 3.4",
+   "state": {
+    "db": "university",
+    "tables": [
+     "student"
+    ],
+    "cols": [
+     "st_major",
+     "st_gpa"
+    ],
+    "filters": [],
+    "sort": null,
+    "limit": "All",
+    "group": {
+     "col": "st_major",
+     "aggs": {
+      "st_gpa": "AVG"
+     },
+     "having": [
+      {
+       "aggCol": "st_gpa|AVG",
+       "op": "is more than",
+       "val": "3.4"
+      }
+     ]
+    },
+    "distinct": false
+   },
+   "sql": "SELECT st.major AS \"Major\", AVG(st.gpa) AS \"Average of GPA\" FROM student st GROUP BY st.major HAVING AVG(st.gpa)>3.4",
+   "rows": 3,
+   "columns": 2
+  },
+  {
+   "id": "u03",
+   "note": "enrollment grade filter + score sort",
+   "state": {
+    "db": "university",
+    "tables": [
+     "enrollment",
+     "student"
+    ],
+    "cols": [
+     "en_sem",
+     "en_grade",
+     "en_score",
+     "st_name",
+     "st_major",
+     "st_year",
+     "st_gpa"
+    ],
+    "filters": [
+     {
+      "col": "en_grade",
+      "op": "equals",
+      "val": "A"
+     }
+    ],
+    "sort": {
+     "col": "en_score",
+     "dir": "DESC"
+    },
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT en.semester AS \"Semester\", en.grade AS \"Grade\", en.score AS \"Score\", st.first_name||' '||st.last_name AS \"Name\", st.major AS \"Major\", st.enrollment_year AS \"Enrollment Year\", st.gpa AS \"GPA\" FROM enrollment en INNER JOIN student st ON en.student_id = st.student_id WHERE en.grade='A' ORDER BY en.score DESC",
+   "rows": 17,
+   "columns": 7
+  },
+  {
+   "id": "u04",
+   "note": "distinct departments with credits filter",
+   "state": {
+    "db": "university",
+    "tables": [
+     "course"
+    ],
+    "cols": [
+     "co_dept"
+    ],
+    "filters": [
+     {
+      "col": "co_cred",
+      "op": "is at least",
+      "val": "4"
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": true
+   },
+   "sql": "SELECT DISTINCT co.department AS \"Department\" FROM course co WHERE co.credits>=4",
+   "rows": 3,
+   "columns": 1
+  },
+  {
+   "id": "u05",
+   "note": "group by department, SUM credits, sorted by name",
+   "state": {
+    "db": "university",
+    "tables": [
+     "course",
+     "enrollment"
+    ],
+    "cols": [
+     "co_dept",
+     "co_cred",
+     "en_score"
+    ],
+    "filters": [],
+    "sort": {
+     "col": "co_dept",
+     "dir": "ASC"
+    },
+    "limit": "All",
+    "group": {
+     "col": "co_dept",
+     "aggs": {
+      "co_cred": "SUM",
+      "en_score": "AVG"
+     },
+     "having": [
+      {
+       "aggCol": "en_score|AVG",
+       "op": "is at least",
+       "val": "85"
+      }
+     ]
+    },
+    "distinct": false
+   },
+   "sql": "SELECT co.department AS \"Department\", SUM(co.credits) AS \"Total of Credits\", AVG(en.score) AS \"Average of Score\" FROM course co INNER JOIN enrollment en ON en.course_id  = co.course_id GROUP BY co.department HAVING AVG(en.score)>=85 ORDER BY co.department ASC",
+   "rows": 4,
+   "columns": 3
+  },
+  {
+   "id": "u06",
+   "note": "empty numeric filter value (Number(\"\") = 0, as the original did)",
+   "state": {
+    "db": "university",
+    "tables": [
+     "student"
+    ],
+    "cols": [
+     "st_name",
+     "st_major",
+     "st_year",
+     "st_gpa"
+    ],
+    "filters": [
+     {
+      "col": "st_gpa",
+      "op": "is more than",
+      "val": ""
+     }
+    ],
+    "sort": null,
+    "limit": "All",
+    "group": null,
+    "distinct": false
+   },
+   "sql": "SELECT st.first_name||' '||st.last_name AS \"Name\", st.major AS \"Major\", st.enrollment_year AS \"Enrollment Year\", st.gpa AS \"GPA\" FROM student st WHERE st.gpa>0",
+   "rows": 25,
+   "columns": 4
+  }
+ ]
+}
