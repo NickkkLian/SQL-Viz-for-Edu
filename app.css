@@ -127,7 +127,7 @@ select.ctl-sel,input.ctl-inp,.toolbar select,.toolbar input{height:30px;padding:
 .mirror .explain{font-size:var(--text-xs);color:var(--text-2);margin-top:var(--space-2)}
 
 /* practice */
-.task{font-size:var(--text-sm);display:grid;gap:var(--space-3)}
+.task{font-size:var(--text-sm);display:grid;gap:var(--space-3);grid-template-columns:minmax(0,1fr)}   /* the column may shrink: a wide expected result scrolls in its own box instead of pushing the page sideways */
 .task .ask{font-size:var(--text-md)}
 .task .meta{display:flex;flex-wrap:wrap;gap:var(--space-1)}
 textarea.editor{width:100%;min-height:120px;padding:var(--space-3);border:1px solid var(--border-input);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:var(--weight-regular) var(--text-sm)/1.6 var(--font-mono);resize:vertical;tab-size:2}
