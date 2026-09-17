@@ -25,7 +25,7 @@ const DB_LABEL = { hospital: 'Hospital', ecommerce: 'E-Commerce', movies: 'Movie
 let SQL = null, dbs = {}, ready = false;
 let state, mode;
 ({ state, mode } = Q.decodeState(location.search));
-let lastSQL = '', lastResult = null, lastError = null;
+let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
 
 // ── helpers ──
@@ -146,10 +146,10 @@ function updatePanels(opts) {
 }
 function runMirror() {
   const prevSQL = lastSQL;
-  lastSQL = ''; lastResult = null; lastError = null;
+  lastSQL = ''; lastResult = null; lastError = null; lastBuildError = null;
   if (!state.tables.length) return;
   const { sql, error } = Q.buildSQL(state);
-  if (!sql) { lastError = error; return; }
+  if (!sql) { lastBuildError = error; return; }
   lastSQL = sql;
   if (prevSQL && prevSQL !== sql && (practice.verdict || practice.error)) { practice.verdict = null; practice.result = null; practice.error = null; }
   if (!ready) return;
@@ -234,7 +234,7 @@ function renderMirrorPanel() {
     h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'Oracle-style layout'), h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: copySQL }, 'Copy'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => setMode('practice') }, 'Practice this query')),
-    lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastError || ''),
+    lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastBuildError || lastError || ''),
     h('p', { class: 'explain' }, 'Reading: ', h('b', {}, tablesLabel()), state.limit !== 'All' ? ' · top ' + state.limit + ' rows' : '', state.sort ? ' · sorted by ' + (colById(state.sort.col) || {}).label + ' ' + (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : '')
   );
 }
@@ -249,14 +249,15 @@ function renderPractice(m) {
   const v = practice.verdict;
   const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
-  const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6 }) : h('p', { class: 'none' }, lastError || 'Loading…');
+  const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6, empty: 'This task matches no rows.' })
+    : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow ? 'Loading…' : ''));
   fill(m, 
     h('div', { class: 'card-head' }, h('h2', {}, 'Practice'), expected ? h('span', { class: 'tag tag-neutral' }, expected.rows.length + ' row' + (expected.rows.length === 1 ? '' : 's') + ' expected') : null, ordered ? h('span', { class: 'tag tag-warning' }, 'row order counts') : null, h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: shareTask }, 'Copy task link')),
     h('div', { class: 'task' },
       h('p', { class: 'ask' }, 'Write one SELECT that returns exactly this result from the ', h('b', {}, DB_LABEL[state.db]), ' dataset — reading ', h('b', {}, tablesLabel()), '. The controls on the left say it in plain English.'),
       h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Column order and column names do not matter; row order ' + (ordered ? 'does (the task has a sort)' : 'does not') + '. SQLite syntax. Only one statement, only SELECT.'),
-      h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Expected result'), h('div', { class: 'tablewrap', style: 'max-height:none' }, preview),
+      h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Expected result'), h('div', { class: 'tablewrap', style: 'max-height:none', tabindex: expected ? '0' : null, role: expected ? 'region' : null, 'aria-label': expected ? 'Expected result' : null }, preview),
         expected && expected.rows.length > 6 ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', style: 'margin-top:var(--space-1)', onclick: () => { practice.showAll = !practice.showAll; renderMirror(); } }, practice.showAll ? 'Show fewer' : 'Show all ' + expected.rows.length + ' rows') : null),
       editor,
       h('div', { class: 'acts' },
@@ -270,8 +271,8 @@ function renderPractice(m) {
           ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'No column in your result matches ', v.unmatchedColumns.map((c, i) => [i ? ', ' : '', h('code', {}, c)]), '.') : null)) : null,
       v && !v.ok && practice.result ? h('div', {},
         h('div', { class: 'legend', style: 'margin-bottom:var(--space-2)' }, h('span', { class: 'm' }, h('i'), 'expected but missing from yours'), h('span', { class: 'x' }, h('i'), 'in yours but not expected')),
-        h('div', { class: 'diff' }, h('div', {}, h('h3', {}, 'Your result (' + practice.result.rows.length + ' row' + (practice.result.rows.length === 1 ? '' : 's') + ')'), h('div', { class: 'tablewrap', style: 'max-height:280px' }, resultTable(practice.result, { compact: true, mark: { extra: v.extra } }))))) : null,
-      v && v.ok && practice.result ? h('div', { class: 'tablewrap', style: 'max-height:280px' }, resultTable(practice.result, { compact: true })) : null,
+        h('div', { class: 'diff' }, h('div', {}, h('h3', {}, 'Your result (' + practice.result.rows.length + ' row' + (practice.result.rows.length === 1 ? '' : 's') + ')'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, mark: { extra: v.extra }, empty: 'Your query returned no rows.' }))))) : null,
+      v && v.ok && practice.result ? h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, empty: 'Your query returned no rows.' })) : null,
       practice.revealed && lastSQL ? h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'The mirror'), h('pre', { class: 'mono', style: 'margin:0;padding:var(--space-3) var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);font-size:var(--text-sm);line-height:1.7;overflow-x:auto', html: highlightSQL(Q.formatSQL(lastSQL)) })) : null
     )
   );
@@ -280,7 +281,8 @@ function runPractice() {
   const ed = $('#editor'); practice.answer = ed ? ed.value : practice.answer;
   practice.verdict = null; practice.result = null; practice.error = null;
   const sql = practice.answer.trim();
-  if (!ready || !lastResult) { toast('The engine is still loading', { alert: true }); return; }
+  if (!ready) { toast('The engine is still loading', { alert: true }); return; }
+  if (!lastResult) { practice.error = 'the task has no result to compare with (' + (lastBuildError || lastError || 'nothing selected') + ') — go back to Explore and fix the task first'; renderMirror(); return; }
   if (!sql) { practice.error = 'write a SELECT first'; renderMirror(); return; }
   if (!Q.isSelectOnly(sql)) { practice.error = 'one statement, starting with SELECT (or WITH). Practice mode never runs anything else.'; renderMirror(); return; }
   // Run on a throwaway copy so nothing a student types can touch the shared in-memory database.
@@ -320,8 +322,8 @@ function resultTable(res, opts = {}) {
         col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, c) : c);
     }))),
     h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, r.map(cellNode)))
-      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length || 1 }, h('b', {}, 'No rows match'), ' — loosen a condition above',
-          opts.sortable && state.filters.length ? [', or ', h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')] : '.'))),
+      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length || 1 }, opts.empty ? opts.empty : [h('b', {}, 'No rows match'), ' — loosen a condition above',
+          opts.sortable && state.filters.length ? [', or ', h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')] : '.']))),
     res.rows.length > limit ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
 }
 let colsOpen = false;
@@ -338,7 +340,13 @@ function renderResults() {
   const sortSel = h('select', { class: 'ctl-sel', 'aria-label': 'Sort by', onchange: e => setSort(e.target.value, state.sort ? state.sort.dir : 'ASC') }, h('option', { value: '', selected: !state.sort }, 'Sort: none'), all.map(c => h('option', { value: c.id, selected: !!state.sort && state.sort.col === c.id }, 'Sort: ' + c.label)));
   const dirSel = state.sort ? h('select', { class: 'ctl-sel', 'aria-label': 'Sort direction', onchange: e => setSort(state.sort.col, e.target.value) }, [['ASC', 'A → Z'], ['DESC', 'Z → A']].map(([v, t]) => h('option', { value: v, selected: state.sort.dir === v }, t))) : null;
   const limSel = h('select', { class: 'ctl-sel', 'aria-label': 'Rows to show', onchange: e => setLimit(e.target.value) }, Q.LIMITS.map(l => h('option', { value: l, selected: state.limit === l }, l === 'All' ? 'All rows' : 'Top ' + l)));
-  const body = lastError ? h('div', { class: 'error' }, h('h3', {}, 'The query failed'), h('pre', {}, lastError), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Usually a condition value of the wrong type. Fix or remove it above.'))
+  // no columns is a state of the controls, not a failed query: it gets its own message and the way out (it used to read
+  // "The query failed — usually a condition value of the wrong type", on a screen with no conditions)
+  const body = lastBuildError === 'no columns chosen' ? h('div', { class: 'empty' }, h('h3', {}, 'No columns chosen'), h('p', {}, 'Every column is unticked in Columns, so there is nothing to select.'),
+      h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.cols = all.map(c => c.id); update(); } }, 'Show every column'))
+    : lastBuildError ? h('p', { class: 'none' }, lastBuildError)
+    : lastError ? h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'The query failed'), h('pre', {}, lastError), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Usually a condition value of the wrong type. Fix or remove it above.'),
+      state.filters.length ? h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')) : null)
     : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true })) : null;
   fill(r, 
     h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
