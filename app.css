@@ -129,6 +129,7 @@ select.ctl-sel,input.ctl-inp,.toolbar select,.toolbar input{height:30px;padding:
 /* practice */
 .task{font-size:var(--text-sm);display:grid;gap:var(--space-3);grid-template-columns:minmax(0,1fr)}   /* the column may shrink: a wide expected result scrolls in its own box instead of pushing the page sideways */
 .task .ask{font-size:var(--text-md)}
+.task p,.empty p,dialog p{max-width:var(--measure)}   /* prose line length (ruling 2026-09-16 20:11 Q7) */
 .task .meta{display:flex;flex-wrap:wrap;gap:var(--space-1)}
 textarea.editor{width:100%;min-height:120px;padding:var(--space-3);border:1px solid var(--border-input);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);font:var(--weight-regular) var(--text-sm)/1.6 var(--font-mono);resize:vertical;tab-size:2}
 .acts{display:flex;flex-wrap:wrap;gap:var(--space-2);align-items:center}
@@ -196,9 +197,9 @@ dialog p{font-size:var(--text-sm);color:var(--text-2);margin-bottom:var(--space-
 
 /* ===== footer (honest block) ===== */
 .honest{border-top:1px solid var(--band-line);font-size:var(--text-xs);color:var(--on-band-2);padding:var(--space-10) var(--gutter) var(--space-12);background:var(--band)}
-.honest dl{margin:0}
+.honest dl{margin-block:0}
 .honest dt{font-weight:var(--weight-semibold);color:var(--on-band);font-family:var(--font-sans);font-size:var(--text-2xs);letter-spacing:var(--tracking-caps);text-transform:uppercase;margin-bottom:var(--space-2)}
-.honest dd{margin:0;max-width:68ch;line-height:var(--leading-relaxed)}
+.honest dd{margin:0;max-width:var(--measure);line-height:var(--leading-relaxed)}
 
 /* ===== breakpoints ===== */
 @media (max-width:1023px){
