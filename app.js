@@ -365,18 +365,20 @@ document.addEventListener('click', () => { if (colsOpen) { colsOpen = false; ren
 
 // ── theme / help ──
 Appearance.bindToggle($('#theme'));   // ◐ switches light/dark only (appearance.js)
-Appearance.bindSettings($('#nl-settings-button'));   // the gear: palette + light/dark
+Appearance.bindSettings($('#nl-settings-button'), { shortcuts: '? opens help. Turn it off if you use voice control. On by default.' });   // the gear: palette, light/dark, single-key shortcuts
 function openHelp() {
   const d = $('#dlg'); fill(d, 
     h('h2', {}, 'How Query Mirror works'),
     h('p', {}, 'Tick tables, set conditions, group and sort. The mirror shows the one SELECT those clicks produce and runs it in SQLite, inside this tab. Practice mode hides the mirror and grades your own SQL by comparing result sets — column order and names are ignored, row order only matters when the task has a sort.'),
+    Appearance.shortcutsOn() ? null : h('p', {}, 'Single-key shortcuts are off — turn them on in Settings.'),
     h('table', {}, h('tbody', {}, [['⌘/Ctrl + Enter', 'Run & check (practice)'], ['?', 'This help'], ['Esc', 'Close dialogs']].map(([k, t]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, t))))),
     h('p', {}, 'Share a task: “Copy task link” puts the whole state (dataset, tables, conditions, grouping, sort) in the URL with practice mode on.'),
     h('div', { class: 'acts' }, h('button', { type: 'button', class: 'btn', onclick: () => d.close() }, 'Close')));
   d.showModal();
 }
 $('#help').addEventListener('click', openHelp);
-document.addEventListener('keydown', e => { if (e.key === '?' && !document.querySelector('dialog[open]') && !/input|textarea|select/i.test(e.target.tagName)) { e.preventDefault(); openHelp(); } });
+// ? is a page-level single key, so the Settings switch can turn it off (WCAG 2.1.4; ruling 2026-09-16 20:11 Q3); the ? button still opens help
+document.addEventListener('keydown', e => { if (e.key === '?' && Appearance.shortcutsOn() && !document.querySelector('dialog[open]') && !/input|textarea|select/i.test(e.target.tagName)) { e.preventDefault(); openHelp(); } });
 
 // ── boot ──
 async function boot() {
