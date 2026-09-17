@@ -703,6 +703,15 @@ function grade(expected, actual, opts){
   out.reason=out.ok?(out.byValue?'match (columns matched by value, not by name)':'match'):(out.missing.length+' missing, '+out.extra.length+' extra');
   return out;
 }
+// sql.js exec() returns nothing at all for a query that matches no rows, so the column names were lost: the explore table
+// dropped its header, and grading compared "0 columns" (a zero-row answer missing a column was graded correct against a
+// zero-row task; round-1 audit, 2026-09-16). A prepared statement names its columns before the first row. The page and
+// check.mjs both read every result through this.
+function runQuery(database, sql){
+  const st=database.prepare(sql);
+  try{ const columns=st.getColumnNames(), rows=[]; while(st.step()) rows.push(st.get()); return {columns, rows}; }
+  finally{ st.free(); }
+}
 // Practice mode accepts exactly one read-only statement.
 function isSelectOnly(sql){
   const s=String(sql||'').trim().replace(/;\s*$/,'');
@@ -755,5 +764,5 @@ function decodeState(search){
 
 return { VERSION, DDL, SCHEMA, OPS_TEXT, OPS_NUM, AGG_LABELS, HAV_OPS, LIMITS,
          emptyState, bridgesFor, allTables, availableCols, defaultCols, findCol, buildFrom, opToSQL, buildSQL,
-         formatSQL, grade, isSelectOnly, encodeState, decodeState };
+         formatSQL, grade, runQuery, isSelectOnly, encodeState, decodeState };
 });

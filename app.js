@@ -31,7 +31,7 @@ const practice = { answer: '', verdict: null, result: null, error: null, reveale
 // ── helpers ──
 // Table cards show the row count SQLite reports for the loaded data, not a number typed into the schema.
 const ROWCOUNT = {};
-function exec(db, sql) { const r = dbs[db].exec(sql); return r.length ? { columns: r[0].columns, rows: r[0].values } : { columns: [], rows: [] }; }
+function exec(db, sql) { return Q.runQuery(dbs[db], sql); }   // keeps the column names of a zero-row result (engine.js)
 function toast(msg, opts = {}) {
   const t = h('div', { class: 'toast enter', role: opts.alert ? 'alert' : 'status' }, msg);
   $('#toasts').append(t); requestAnimationFrame(() => t.classList.remove('enter'));
@@ -286,8 +286,7 @@ function runPractice() {
   // Run on a throwaway copy so nothing a student types can touch the shared in-memory database.
   const scratch = new SQL.Database(dbs[state.db].export());
   try {
-    const r = scratch.exec(sql.replace(/;\s*$/, ''));
-    practice.result = r.length ? { columns: r[0].columns, rows: r[0].values } : { columns: [], rows: [] };
+    practice.result = Q.runQuery(scratch, sql.replace(/;\s*$/, ''));
     practice.verdict = Q.grade(lastResult, practice.result, { ordered: !!state.sort });
     practice.showAll = !practice.verdict.ok;
   } catch (e) { practice.error = e.message; }

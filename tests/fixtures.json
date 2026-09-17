@@ -216,7 +216,7 @@
    },
    "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\" FROM patient pa WHERE pa.first_name||' '||pa.last_name LIKE '%O''Brien%'",
    "rows": 0,
-   "columns": 0
+   "columns": 5
   },
   {
    "id": "h08",
@@ -252,7 +252,7 @@
    },
    "sql": "SELECT pa.first_name||' '||pa.last_name AS \"Name\", pa.dob AS \"Date of Birth\", pa.gender AS \"Gender\", pa.city AS \"City\", pa.country AS \"Country\" FROM patient pa WHERE (pa.city IS NULL OR CAST(pa.city AS TEXT)='') AND (pa.country IS NOT NULL AND CAST(pa.country AS TEXT)!='')",
    "rows": 0,
-   "columns": 0
+   "columns": 5
   },
   {
    "id": "h09",
@@ -392,7 +392,7 @@
    },
    "sql": "SELECT pr.prod_name AS \"Product Name\", pr.category AS \"Category\", pr.stock_qty AS \"Stock Qty\", pr.unit_price AS \"Unit Price ($)\" FROM product pr WHERE pr.prod_name LIKE '100\\%%'",
    "rows": 0,
-   "columns": 0
+   "columns": 4
   },
   {
    "id": "e05",

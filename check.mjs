@@ -44,7 +44,7 @@ for (const [name, ddl] of Object.entries(Q.DDL)) {
   ddl.split(';').map(s => s.trim()).filter(s => s.length > 4).forEach(s => { try { db.run(s + ';'); } catch (e) {} });
   dbs[name] = db;
 }
-const exec = (db, sql) => { const r = dbs[db].exec(sql); return r.length ? { columns: r[0].columns, rows: r[0].values } : { columns: [], rows: [] }; };
+const exec = (db, sql) => Q.runQuery(dbs[db], sql);   // the same reader the page uses
 let sqlSame = 0, rowsSame = 0, rtSame = 0;
 for (const f of fx.fixtures) {
   const built = Q.buildSQL(f.state).sql;
@@ -89,6 +89,14 @@ const wrongVerdict = Q.grade(expected, studentWrong);
 ok(!wrongVerdict.ok, 'fixture u02: MAX instead of AVG is graded wrong');
 ok(wrongVerdict.unmatchedColumns.join() === 'Average of GPA', 'fixture u02: the verdict names the one wrong column (Average of GPA), not the right one (Major)');
 ok(Q.grade(expected, student).unmatchedColumns.length === 0, 'fixture u02: a correct answer has no unmatched columns');
+// zero-row results keep their columns, so grading still compares them
+const ZERO = 'select title, rating from film where rating >= 99';
+ok(dbs.movies.exec(ZERO).length === 0, 'control: sql.js exec() returns nothing for a zero-row result (why results go through Q.runQuery)');
+ok(exec('movies', ZERO).columns.length === 2 && exec('movies', ZERO).rows.length === 0, 'a zero-row result keeps its two column names');
+const zeroTask = Q.grade(exec('movies', ZERO), exec('movies', 'select title from film where rating >= 99'));
+ok(!zeroTask.ok && /column count: expected 2, got 1/.test(zeroTask.reason), 'a zero-row task: an answer missing a column is graded wrong (column count)');
+const zeroAnswer = Q.grade(expected, exec('university', "select major, avg(gpa) from student where major = 'biology' group by major having avg(gpa) > 3.4"));
+ok(!zeroAnswer.ok && zeroAnswer.reason === expected.rows.length + ' missing, 0 extra', 'fixture u02: a zero-row answer is told which rows are missing, not "expected 2 columns, got 0"');
 
 console.log('5. page hygiene');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
