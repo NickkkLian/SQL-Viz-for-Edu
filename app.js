@@ -127,13 +127,19 @@ function focusKey(el) {
   find.caret = typeof el.selectionStart === 'number' ? [el.selectionStart, el.selectionEnd] : null;   // a text field keeps its caret
   return find;
 }
+// Where focus goes when there is no control to go back to, and where the skip link sends it: the first visible h1 in main,
+// else the first visible h2, else main itself (ruling 2026-09-16 20:11 Q16)
+function firstHeading() {
+  const seen = x => { const r = x.getBoundingClientRect(), cs = getComputedStyle(x); return r.width > 2 && r.height > 2 && cs.visibility !== 'hidden' && !/inset\(50%\)|rect\(0/.test(cs.clipPath + cs.clip); };
+  const x = [...document.querySelectorAll('main h1')].find(seen) || [...document.querySelectorAll('main h2')].find(seen) || $('#main');
+  if (x && !x.hasAttribute('tabindex')) x.setAttribute('tabindex', '-1');
+  return x;
+}
 function restoreFocus(find) {
   if (!find || (document.activeElement && document.activeElement !== document.body)) return;
   let el = find();
-  // headings in this order (one query for 'main h1, main h2, main' returns document order, where main itself comes first)
-  const heading = () => { for (const sel of ['main h1', 'main h2', 'main']) { const x = [...document.querySelectorAll(sel)].find(y => { const r = y.getBoundingClientRect(); return r.width > 2 && r.height > 2; }); if (x) { if (!x.hasAttribute('tabindex')) x.setAttribute('tabindex', '-1'); return x; } } return null; };
-  if (!el || !el.getClientRects().length) el = heading();
-  if (el) { el.focus(); if (document.activeElement !== el && (el = heading())) el.focus(); }   // a disabled control does not take focus
+  if (!el || !el.getClientRects().length) el = firstHeading();
+  if (el) { el.focus(); if (document.activeElement !== el && (el = firstHeading())) el.focus(); }   // a disabled control does not take focus
   if (el && find.caret && el.setSelectionRange) try { el.setSelectionRange(find.caret[0], find.caret[1]); } catch (e) { /* not a text field */ }
 }
 function update(opts = {}) { const find = focusKey(document.activeElement); updatePanels(opts); restoreFocus(find); }
@@ -366,6 +372,8 @@ document.addEventListener('click', () => { if (colsOpen) { colsOpen = false; ren
 // ── theme / help ──
 Appearance.bindToggle($('#theme'));   // ◐ switches light/dark only (appearance.js)
 Appearance.bindSettings($('#nl-settings-button'), { shortcuts: '? opens help. Turn it off if you use voice control. On by default.' });   // the gear: palette, light/dark, single-key shortcuts
+// the skip link goes to the first visible heading in main, without touching the address (ruling 2026-09-16 20:11 Q16)
+document.querySelector('.skip').addEventListener('click', e => { e.preventDefault(); firstHeading().focus(); });
 function openHelp() {
   const d = $('#dlg'); fill(d, 
     h('h2', {}, 'How Query Mirror works'),
