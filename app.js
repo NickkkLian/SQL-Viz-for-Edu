@@ -26,6 +26,8 @@ let SQL = null, dbs = {}, ready = false;
 let state, mode;
 ({ state, mode } = Q.decodeState(location.search));
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
+// the loading state appears only when loading takes 300ms or more (v1 §4.9: a shorter wait shows nothing, so nothing flashes)
+let slow = false;
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
 
 // ── helpers ──
@@ -161,7 +163,7 @@ function renderSubbar() {
     h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Dataset' }, Object.keys(Q.SCHEMA).map(db => h('button', { type: 'button', role: 'radio', 'aria-checked': String(db === state.db), onclick: () => setDB(db) }, DB_LABEL[db]))),
     h('span', { class: 'seg-label' }, 'Mode'),
     h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Mode' }, [['explore', 'Explore'], ['practice', 'Practice']].map(([m, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mode), onclick: () => setMode(m) }, l))),
-    h('span', { class: 'status ' + (ready ? 'ok' : 'busy'), id: 'status' }, h('i'), ready ? 'SQLite ready · ' + Object.keys(Q.SCHEMA).length + ' datasets in memory' : 'Loading SQLite…')
+    h('span', { class: 'status ' + (ready ? 'ok' : slow ? 'busy' : 'wait'), id: 'status' }, ready || slow ? h('i') : null, ready ? 'SQLite ready · ' + Object.keys(Q.SCHEMA).length + ' datasets in memory' : slow ? 'Loading SQLite…' : '')
   );
 }
 function renderTables() {
@@ -331,7 +333,7 @@ function renderResults() {
   const r = $('#results');
   r.hidden = mode === 'practice' && state.tables.length > 0;
   if (!state.tables.length) { fill(r, h('p', { class: 'none', style: 'font-size:var(--text-xs);color:var(--text-3)' }, 'Results appear here.')); return; }
-  if (!ready) { fill(r, h('div', { class: 'loading' }, h('span', {}, 'Loading SQLite (650 KB, runs locally)…'), h('div', { class: 'bar' }, h('i', { id: 'ldbar' })))); return; }
+  if (!ready) { fill(r, slow ? h('div', { class: 'loading' }, h('span', {}, 'Loading SQLite (650 KB, runs locally)…'), h('div', { class: 'bar' }, h('i', { id: 'ldbar' }))) : null); return; }
   const all = cols(); const sc = Q.SCHEMA[state.db];
   const groups = Q.allTables(state.db, state.tables).map(t => ({ t, label: sc.tables[t].label, cols: all.filter(c => c.table === t) }));
   const colsBtn = h('div', { class: 'cols' },
@@ -375,6 +377,7 @@ document.addEventListener('keydown', e => { if (e.key === '?' && !document.query
 
 // ── boot ──
 async function boot() {
+  setTimeout(() => { slow = true; if (!ready) update(); }, 300);
   update();
   try {
     const b64 = window.SQL_WASM_B64 || '';
