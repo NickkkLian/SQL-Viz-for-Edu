@@ -238,10 +238,13 @@ function renderMirrorPanel() {
     return;
   }
   if (mode === 'practice') { renderPractice(m); return; }
+  const noRows = !!lastResult && lastResult.rows.length === 0;
   fill(m, 
     h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'Oracle-style layout'), h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: copySQL }, 'Copy'),
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm', onclick: () => setMode('practice') }, 'Practice this query')),
+      h('button', { type: 'button', class: 'btn btn-primary btn-sm', disabled: noRows, 'aria-describedby': noRows ? 'practice-why' : null, onclick: () => setMode('practice') }, 'Practice this query')),
+    // a query with no rows makes a task any empty answer would pass, so it cannot be practised (ruling 2026-09-16 20:11 Q9)
+    noRows ? h('p', { class: 'explain', id: 'practice-why' }, 'Nothing to practise — this query returns no rows. Loosen a condition first.') : null,
     lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastBuildError || lastError || ''),
     h('p', { class: 'explain' }, 'Reading: ', h('b', {}, tablesLabel()), state.limit !== 'All' ? ' · top ' + state.limit + ' rows' : '', state.sort ? ' · sorted by ' + (colById(state.sort.col) || {}).label + ' ' + (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : '')
   );
@@ -254,6 +257,12 @@ function copySQL() {
 }
 function renderPractice(m) {
   const expected = lastResult; const ordered = !!state.sort;
+  if (expected && expected.rows.length === 0) {   // opened from a link: the same rule as the disabled button in explore
+    fill(m, h('div', { class: 'card-head' }, h('h2', {}, 'Practice')), h('div', { class: 'empty' }, h('h3', {}, 'Nothing to practise'),
+      h('p', {}, "This task's result has no rows, so any query that returns nothing would count as correct."),
+      h('button', { type: 'button', class: 'btn btn-sm', onclick: () => setMode('explore') }, 'Back to explore')));
+    return;
+  }
   const v = practice.verdict;
   const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
@@ -355,7 +364,7 @@ function renderResultsPanel() {
   // no columns is a state of the controls, not a failed query: it gets its own message and the way out (it used to read
   // "The query failed — usually a condition value of the wrong type", on a screen with no conditions)
   const body = lastBuildError === 'no columns chosen' ? h('div', { class: 'empty' }, h('h3', {}, 'No columns chosen'), h('p', {}, 'Every column is unticked in Columns, so there is nothing to select.'),
-      h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.cols = all.map(c => c.id); update(); } }, 'Show every column'))
+      h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.cols = all.map(c => c.id); update(); } }, 'Show all columns'))
     : lastBuildError ? h('p', { class: 'none' }, lastBuildError)
     : lastError ? h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'The query failed'), h('pre', {}, lastError), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Usually a condition value of the wrong type. Fix or remove it above.'),
       h('div', {}, state.filters.length ? h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')
