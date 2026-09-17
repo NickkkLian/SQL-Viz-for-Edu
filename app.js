@@ -265,7 +265,7 @@ function renderPractice(m) {
         h('button', { type: 'button', class: 'btn btn-ghost', 'aria-pressed': String(practice.revealed), onclick: () => { practice.revealed = !practice.revealed; renderMirror(); } }, practice.revealed ? 'Hide the mirror' : 'Reveal the mirror'),
         h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => setMode('explore') }, 'Back to explore'),
         h('span', { class: 'keys' }, h('kbd', {}, '⌘/Ctrl'), ' + ', h('kbd', {}, 'Enter'), ' runs')),
-      practice.error ? h('div', { class: 'verdict bad', role: 'status' }, h('span', {}, '✗'), h('span', {}, h('b', {}, 'SQL error'), ' — ', practice.error)) : null,
+      practice.error ? h('div', { class: 'verdict bad', role: 'alert' }, h('span', {}, '✗'), h('span', {}, h('b', {}, 'SQL error'), ' — ', practice.error)) : null,
       v ? h('div', { class: 'verdict ' + (v.ok ? 'ok' : 'bad'), role: 'status' }, h('span', {}, v.ok ? '✓' : '✗'), h('span', {}, h('b', {}, v.ok ? 'Correct' : 'Not yet'), ' — ', v.reason, v.ok ? ' · ' + v.actualRows + ' row' + (v.actualRows === 1 ? '' : 's') : '',
         !v.ok && v.unmatchedColumns && v.unmatchedColumns.length && v.unmatchedColumns.length < (lastResult ? lastResult.columns.length : 0)
           ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'No column in your result matches ', v.unmatchedColumns.map((c, i) => [i ? ', ' : '', h('code', {}, c)]), '.') : null)) : null,
@@ -393,7 +393,7 @@ async function boot() {
   } catch (e) {
     console.error(e);
     const st = $('#status'); if (st) { st.className = 'status err'; st.replaceChildren(h('i'), 'SQLite failed to load'); }
-    fill($('#results'), h('div', { class: 'error' }, h('h3', {}, 'SQLite could not start'), h('pre', {}, String(e && e.message || e)), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The engine ships inside this folder (vendor/). Reload; if it persists, the files were served incompletely.')));
+    fill($('#results'), h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('pre', {}, String(e && e.message || e)), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The engine ships inside this folder (vendor/). Reload; if it persists, the files were served incompletely.')));
   }
 }
 boot();
