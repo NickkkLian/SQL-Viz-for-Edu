@@ -130,11 +130,11 @@ function focusKey(el) {
 function restoreFocus(find) {
   if (!find || (document.activeElement && document.activeElement !== document.body)) return;
   let el = find();
-  if (!el || !el.getClientRects().length) {
-    el = [...document.querySelectorAll('main h1, main h2, main')].find(x => { const r = x.getBoundingClientRect(); return r.width > 2 && r.height > 2; });
-    if (el && !el.hasAttribute('tabindex')) el.setAttribute('tabindex', '-1');
-  }
-  if (el) { el.focus(); if (find.caret && el.setSelectionRange) try { el.setSelectionRange(find.caret[0], find.caret[1]); } catch (e) { /* not a text field */ } }
+  // headings in this order (one query for 'main h1, main h2, main' returns document order, where main itself comes first)
+  const heading = () => { for (const sel of ['main h1', 'main h2', 'main']) { const x = [...document.querySelectorAll(sel)].find(y => { const r = y.getBoundingClientRect(); return r.width > 2 && r.height > 2; }); if (x) { if (!x.hasAttribute('tabindex')) x.setAttribute('tabindex', '-1'); return x; } } return null; };
+  if (!el || !el.getClientRects().length) el = heading();
+  if (el) { el.focus(); if (document.activeElement !== el && (el = heading())) el.focus(); }   // a disabled control does not take focus
+  if (el && find.caret && el.setSelectionRange) try { el.setSelectionRange(find.caret[0], find.caret[1]); } catch (e) { /* not a text field */ }
 }
 function update(opts = {}) { const find = focusKey(document.activeElement); updatePanels(opts); restoreFocus(find); }
 function updatePanels(opts) {
@@ -329,7 +329,10 @@ function resultTable(res, opts = {}) {
     res.rows.length > limit ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
 }
 let colsOpen = false;
-function renderResults() {
+// the Columns button, its checkboxes and the header buttons are rebuilt on every change: keep focus on the same control
+// (Enter on Columns, or Space on a checkbox, left focus on <body>; round-1 fix run, 2026-09-16)
+function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); restoreFocus(find); }
+function renderResultsPanel() {
   const r = $('#results');
   r.hidden = mode === 'practice' && state.tables.length > 0;
   if (!state.tables.length) { fill(r, h('p', { class: 'none', style: 'font-size:var(--text-xs);color:var(--text-3)' }, 'Results appear here.')); return; }
