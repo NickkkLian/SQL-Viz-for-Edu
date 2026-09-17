@@ -255,7 +255,7 @@ function copySQL() {
 function renderPractice(m) {
   const expected = lastResult; const ordered = !!state.sort;
   const v = practice.verdict;
-  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
+  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
   const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6, empty: 'This task matches no rows.' })
     : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow ? 'Loading…' : ''));
@@ -273,7 +273,8 @@ function renderPractice(m) {
         h('button', { type: 'button', class: 'btn btn-ghost', 'aria-pressed': String(practice.revealed), onclick: () => { practice.revealed = !practice.revealed; renderMirror(); } }, practice.revealed ? 'Hide the mirror' : 'Reveal the mirror'),
         h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => setMode('explore') }, 'Back to explore'),
         h('span', { class: 'keys' }, h('kbd', {}, '⌘/Ctrl'), ' + ', h('kbd', {}, 'Enter'), ' runs')),
-      practice.error ? h('div', { class: 'verdict bad', role: 'alert' }, h('span', {}, '✗'), h('span', {}, h('b', {}, 'SQL error'), ' — ', practice.error)) : null,
+      practice.error ? h('div', { class: 'verdict bad', role: 'alert', id: 'practice-error' }, h('span', {}, '✗'), h('span', {}, h('b', {}, 'SQL error'), ' — ', practice.error,
+        practice.errorFromSQLite ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'Check the table and column names against the dataset on the left, then run again.') : null)) : null,
       v ? h('div', { class: 'verdict ' + (v.ok ? 'ok' : 'bad'), role: 'status' }, h('span', {}, v.ok ? '✓' : '✗'), h('span', {}, h('b', {}, v.ok ? 'Correct' : 'Not yet'), ' — ', v.reason, v.ok ? ' · ' + v.actualRows + ' row' + (v.actualRows === 1 ? '' : 's') : '',
         !v.ok && v.unmatchedColumns && v.unmatchedColumns.length && v.unmatchedColumns.length < (lastResult ? lastResult.columns.length : 0)
           ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'No column in your result matches ', v.unmatchedColumns.map((c, i) => [i ? ', ' : '', h('code', {}, c)]), '.') : null)) : null,
@@ -287,7 +288,7 @@ function renderPractice(m) {
 }
 function runPractice() {
   const ed = $('#editor'); practice.answer = ed ? ed.value : practice.answer;
-  practice.verdict = null; practice.result = null; practice.error = null;
+  practice.verdict = null; practice.result = null; practice.error = null; practice.errorFromSQLite = false;
   const sql = practice.answer.trim();
   if (!ready) { toast('The engine is still loading', { alert: true }); return; }
   if (!lastResult) { practice.error = 'the task has no result to compare with (' + (lastBuildError || lastError || 'nothing selected') + ') — go back to Explore and fix the task first'; renderMirror(); return; }
@@ -299,7 +300,7 @@ function runPractice() {
     practice.result = Q.runQuery(scratch, sql.replace(/;\s*$/, ''));
     practice.verdict = Q.grade(lastResult, practice.result, { ordered: !!state.sort });
     practice.showAll = !practice.verdict.ok;
-  } catch (e) { practice.error = e.message; }
+  } catch (e) { practice.error = e.message; practice.errorFromSQLite = true; }
   finally { scratch.close(); }
   renderMirror();
   const st = $('#mirror .verdict'); if (st) st.scrollIntoView({ block: 'nearest' });
@@ -357,7 +358,8 @@ function renderResultsPanel() {
       h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.cols = all.map(c => c.id); update(); } }, 'Show every column'))
     : lastBuildError ? h('p', { class: 'none' }, lastBuildError)
     : lastError ? h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'The query failed'), h('pre', {}, lastError), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Usually a condition value of the wrong type. Fix or remove it above.'),
-      state.filters.length ? h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')) : null)
+      h('div', {}, state.filters.length ? h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')
+        : h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { Object.assign(state, { cols: Q.defaultCols(state.db, state.tables), filters: [], group: null, sort: null, distinct: false, limit: 'All' }); update(); } }, 'Reset this query')))
     : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true })) : null;
   fill(r, 
     h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
@@ -409,7 +411,9 @@ async function boot() {
   } catch (e) {
     console.error(e);
     const st = $('#status'); if (st) { st.className = 'status err'; st.replaceChildren(h('i'), 'SQLite failed to load'); }
-    fill($('#results'), h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('pre', {}, String(e && e.message || e)), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The engine ships inside this folder (vendor/). Reload; if it persists, the files were served incompletely.')));
+    // what happened and what to do, without the engine's own exception text (it is in the console); Reload is the fix
+    fill($('#results'), h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The SQL engine ships inside this folder (vendor/) and did not load in this browser. Reload; if it persists, the files were served incompletely.'),
+      h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => location.reload() }, 'Reload'))));
   }
 }
 boot();
