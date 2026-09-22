@@ -58,3 +58,15 @@ jobs:
           3358bb12892642698c0804c85cba48de562bc2de324fe58a422f282832c79c01  vendor/sql-wasm.js
           4c1c978826062f7b1bb6cc811503863b01415175d0e6dd9ce8a30a81a02c0afb  vendor/sql-wasm.wasm
           SUMS
+
+  stylesheet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # every class this page puts on an element has a rule, and every rule is for a class it puts there
+      - run: node check-css.mjs
+      # and the check goes red when a rule is deleted
+      - run: node check-css.mjs --break
