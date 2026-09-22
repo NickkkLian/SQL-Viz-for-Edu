@@ -193,7 +193,7 @@ function renderControls() {
   const sel = (opts, value, onchange, extra = {}) => h('select', { class: 'ctl-sel', onchange: e => onchange(e.target.value), ...extra }, opts.map(o => h('option', { value: o.v, selected: o.v === value }, o.t)));
   const colOpts = all.map(c => ({ v: c.id, t: c.label + (state.tables.length + Q.bridgesFor(state.db, state.tables).length > 1 ? ' · ' + c.tableLabel : '') }));
   // Filters
-  const filters = h('div', { class: 'ctl-sect' },
+  const filters = h('div', {},
     h('h3', {}, 'Only rows where', h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: addFilter }, '+ condition')),
     state.filters.length ? state.filters.map((f, i) => {
       const col = colById(f.col) || all[0]; const isNum = col.type === 'number'; const ops = isNum ? Q.OPS_NUM : Q.OPS_TEXT;
@@ -212,7 +212,7 @@ function renderControls() {
   // Summarize
   const g = state.group;
   const numCols = all.filter(c => c.type === 'number' && (!g || c.id !== g.col));
-  const sum = h('div', { class: 'ctl-sect' },
+  const sum = h('div', {},
     h('h3', {}, 'Summarize'),
     h('div', { class: 'row two' }, h('span', { class: 'lbl' }, 'Group rows by'), sel([{ v: '', t: 'No grouping' }, ...colOpts], g ? g.col : '', v => setGroup(v), { 'aria-label': 'Group rows by' })),
     g && numCols.length ? h('div', { class: 'lbl', style: 'margin-top:var(--space-1)' }, 'For each group, calculate') : null,
