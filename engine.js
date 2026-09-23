@@ -347,26 +347,26 @@ const SCHEMA={
 ecommerce:{
   order:['product','customer','order_hdr','order_item'],
   tables:{
-    product:{icon:'📦',label:'Products',bridge:false,alias:'pr',cols:[
+    product:{label:'Products',bridge:false,alias:'pr',cols:[
       {id:'pr_id',  label:'Product ID',   type:'text',  expr:'pr.prod_id',  hide:true},
       {id:'pr_name',label:'Product Name', type:'text',  expr:'pr.prod_name'},
       {id:'pr_cat', label:'Category',     type:'text',  expr:'pr.category', opts:['Electronics','Sports','Kitchen','Office','Home','Books']},
       {id:'pr_stk', label:'Stock Qty',    type:'number',expr:'pr.stock_qty'},
       {id:'pr_price',label:'Unit Price ($)',type:'number',expr:'pr.unit_price'}
     ]},
-    customer:{icon:'👤',label:'Customers',bridge:false,alias:'cu',cols:[
+    customer:{label:'Customers',bridge:false,alias:'cu',cols:[
       {id:'cu_id',   label:'Customer ID', type:'number',expr:'cu.cust_id',   hide:true},
       {id:'cu_name', label:'Name',        type:'text',  expr:"cu.first_name||' '||cu.last_name"},
       {id:'cu_email',label:'Email',       type:'text',  expr:'cu.email'},
       {id:'cu_city', label:'City',        type:'text',  expr:'cu.city',      opts:['Toronto','New York','London','Madrid','Seoul','Berlin','Paris','Tokyo','Lagos','Rome']},
       {id:'cu_country',label:'Country',   type:'text',  expr:'cu.country',   opts:['Canada','US','UK','Spain','Korea','Germany','France','Japan','Nigeria','Italy']}
     ]},
-    order_hdr:{icon:'🧾',label:'Orders',bridge:false,alias:'oh',cols:[
+    order_hdr:{label:'Orders',bridge:false,alias:'oh',cols:[
       {id:'oh_id',    label:'Order ID',   type:'number',expr:'oh.order_id'},
       {id:'oh_date',  label:'Order Date', type:'text',  expr:'oh.order_date'},
       {id:'oh_status',label:'Status',     type:'text',  expr:'oh.status',    opts:['Delivered','Shipped','Processing']}
     ]},
-    order_item:{icon:'📋',label:'Order Items',bridge:false,alias:'oi',cols:[
+    order_item:{label:'Order Items',bridge:false,alias:'oi',cols:[
       {id:'oi_qty',  label:'Quantity',          type:'number',expr:'oi.quantity'},
       {id:'oi_price',label:'Price Charged ($)',  type:'number',expr:'oi.price_charged'},
       {id:'oi_total',label:'Line Total ($)',      type:'number',expr:'ROUND(oi.quantity*oi.price_charged,2)'}
@@ -381,7 +381,7 @@ ecommerce:{
 hospital:{
   order:['patient','doctor','appointment'],
   tables:{
-    patient:{icon:'🏥',label:'Patients',bridge:false,alias:'pa',cols:[
+    patient:{label:'Patients',bridge:false,alias:'pa',cols:[
       {id:'pa_id',    label:'Patient ID',  type:'number',expr:'pa.patient_id',hide:true},
       {id:'pa_name',  label:'Name',        type:'text',  expr:"pa.first_name||' '||pa.last_name"},
       {id:'pa_dob',   label:'Date of Birth',type:'text', expr:'pa.dob'},
@@ -389,13 +389,13 @@ hospital:{
       {id:'pa_city',  label:'City',        type:'text',  expr:'pa.city',      opts:['Chicago','Houston','Phoenix','Toronto','London','Sydney','Berlin','Paris','New York']},
       {id:'pa_country',label:'Country',    type:'text',  expr:'pa.country',   opts:['US','Canada','UK','Australia','Germany','France']}
     ]},
-    doctor:{icon:'👨‍⚕️',label:'Doctors',bridge:false,alias:'dr',cols:[
+    doctor:{label:'Doctors',bridge:false,alias:'dr',cols:[
       {id:'dr_id',   label:'Doctor ID',   type:'number',expr:'dr.doctor_id',  hide:true},
       {id:'dr_name', label:'Doctor Name', type:'text',  expr:"dr.first_name||' '||dr.last_name"},
       {id:'dr_spec', label:'Specialty',   type:'text',  expr:'dr.specialty',  opts:['Cardiology','Neurology','Pediatrics','Orthopedics','General Practice']},
       {id:'dr_target',label:'Patient Target',type:'number',expr:'dr.target_patients'}
     ]},
-    appointment:{icon:'📅',label:'Appointments',bridge:false,alias:'ap',cols:[
+    appointment:{label:'Appointments',bridge:false,alias:'ap',cols:[
       {id:'ap_id',    label:'Appt ID',    type:'number',expr:'ap.appt_id',  hide:true},
       {id:'ap_date',  label:'Appt Date',  type:'text',  expr:'ap.appt_date'},
       {id:'ap_diag',  label:'Diagnosis',  type:'text',  expr:'ap.diagnosis'},
@@ -410,7 +410,7 @@ hospital:{
 movies:{
   order:['film','director','cast_link','viewer','watch_history','genre_tag'],
   tables:{
-    film:{icon:'🎬',label:'Films',bridge:false,alias:'fi',cols:[
+    film:{label:'Films',bridge:false,alias:'fi',cols:[
       {id:'fi_id',    label:'Film ID',       type:'text',  expr:'fi.film_id',    hide:true},
       {id:'fi_title', label:'Title',         type:'text',  expr:'fi.title'},
       {id:'fi_year',  label:'Release Year',  type:'number',expr:'fi.release_year'},
@@ -419,27 +419,27 @@ movies:{
       {id:'fi_box',   label:'Box Office ($M)',type:'number',expr:'fi.box_office_m'},
       {id:'fi_run',   label:'Runtime (min)', type:'number',expr:'fi.runtime_min'}
     ]},
-    director:{icon:'🎥',label:'Directors',bridge:false,alias:'di',cols:[
+    director:{label:'Directors',bridge:false,alias:'di',cols:[
       {id:'di_id',    label:'Director ID',   type:'number',expr:'di.director_id', hide:true},
       {id:'di_name',  label:'Director Name', type:'text',  expr:'di.full_name'},
       {id:'di_nat',   label:'Nationality',   type:'text',  expr:'di.nationality', opts:['Nigerian','Mexican','Russian','British','Chinese','Algerian','Swedish','Pakistani','Japanese','Italian','Ghanaian','American','German','Korean','Bulgarian','Brazilian','Indian','Norwegian','Portuguese','Australian','Egyptian','Argentinian']},
       {id:'di_awards',label:'Awards Won',    type:'number',expr:'di.awards_won'},
       {id:'di_born',  label:'Birth Year',    type:'number',expr:'di.birth_year'}
     ]},
-    cast_link:{icon:'🔗',label:'Film-Director link',bridge:true,alias:'cl',cols:[
+    cast_link:{label:'Film-Director link',bridge:true,alias:'cl',cols:[
       {id:'cl_contrib',label:'Contribution',type:'text',expr:'cl.contribution',opts:['Director','Producer','Executive Producer','Co-Director']}
     ]},
-    genre_tag:{icon:'🏷',label:'Film Tags',bridge:false,alias:'gt',cols:[
+    genre_tag:{label:'Film Tags',bridge:false,alias:'gt',cols:[
       {id:'gt_name',label:'Tag',type:'text',expr:'gt.tag_name',opts:['suspenseful','emotional','visually stunning','thought-provoking','family-friendly','dark','inspiring','fast-paced','slow-burn','critically acclaimed','cult classic','award-winning','light-hearted','atmospheric','edge-of-seat','tearjerker','mind-bending','action-packed']}
     ]},
-    viewer:{icon:'👤',label:'Viewers',bridge:false,alias:'vi',cols:[
+    viewer:{label:'Viewers',bridge:false,alias:'vi',cols:[
       {id:'vi_id',    label:'Viewer ID',    type:'number',expr:'vi.viewer_id',  hide:true},
       {id:'vi_name',  label:'Viewer Name',  type:'text',  expr:'vi.full_name'},
       {id:'vi_country',label:'Country',     type:'text',  expr:'vi.country',    opts:['US','Canada','UK','China','Brazil','Norway','UAE','Australia','India','Korea','France','Japan','Italy','Ghana','Sweden','Turkey','Russia','Mexico','Lebanon','Ireland','Taiwan','South Africa','Portugal']},
       {id:'vi_member',label:'Membership',   type:'text',  expr:'vi.membership', opts:['Premium','Standard']},
       {id:'vi_year',  label:'Joined Year',  type:'number',expr:'vi.joined_year'}
     ]},
-    watch_history:{icon:'▶️',label:'Watch History',bridge:false,alias:'wh',cols:[
+    watch_history:{label:'Watch History',bridge:false,alias:'wh',cols:[
       {id:'wh_id',label:'Watch ID',type:'text',expr:'wh.watch_id',hide:true}
     ]}
   },
@@ -454,21 +454,21 @@ movies:{
 university:{
   order:['student','course','enrollment'],
   tables:{
-    student:{icon:'🎓',label:'Students',bridge:false,alias:'st',cols:[
+    student:{label:'Students',bridge:false,alias:'st',cols:[
       {id:'st_id',    label:'Student ID',    type:'number',expr:'st.student_id', hide:true},
       {id:'st_name',  label:'Name',          type:'text',  expr:"st.first_name||' '||st.last_name"},
       {id:'st_major', label:'Major',         type:'text',  expr:'st.major',      opts:['Computer Science','Business','Psychology','Biology','Engineering']},
       {id:'st_year',  label:'Enrollment Year',type:'number',expr:'st.enrollment_year'},
       {id:'st_gpa',   label:'GPA',           type:'number',expr:'st.gpa'}
     ]},
-    course:{icon:'📚',label:'Courses',bridge:false,alias:'co',cols:[
+    course:{label:'Courses',bridge:false,alias:'co',cols:[
       {id:'co_id',   label:'Course ID',    type:'text',  expr:'co.course_id'},
       {id:'co_name', label:'Course Name',  type:'text',  expr:'co.course_name'},
       {id:'co_dept', label:'Department',   type:'text',  expr:'co.department',  opts:['Computer Science','Business','Biology','Engineering','Psychology']},
       {id:'co_cred', label:'Credits',      type:'number',expr:'co.credits'},
       {id:'co_cap',  label:'Max Capacity', type:'number',expr:'co.max_capacity'}
     ]},
-    enrollment:{icon:'📋',label:'Enrollments',bridge:false,alias:'en',cols:[
+    enrollment:{label:'Enrollments',bridge:false,alias:'en',cols:[
       {id:'en_id',    label:'Enroll ID',  type:'number',expr:'en.enroll_id', hide:true},
       {id:'en_sem',   label:'Semester',   type:'text',  expr:'en.semester'},
       {id:'en_grade', label:'Grade',      type:'text',  expr:'en.grade',    opts:['A','A-','B+','B','C+','C']},
