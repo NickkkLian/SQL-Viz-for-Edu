@@ -26,7 +26,7 @@ let SQL = null, dbs = {}, ready = false;
 let state, mode;
 ({ state, mode } = Q.decodeState(location.search));
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
-// the loading state appears only when loading takes 300ms or more (v1 §4.9: a shorter wait shows nothing, so nothing flashes)
+// the loading state appears only when loading takes 300ms or more (a shorter wait shows nothing, so nothing flashes)
 let slow = false;
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
 
@@ -128,7 +128,7 @@ function focusKey(el) {
   return find;
 }
 // Where focus goes when there is no control to go back to, and where the skip link sends it: the first visible h1 in main,
-// else the first visible h2, else main itself (ruling 2026-09-16 20:11 Q16)
+// else the first visible h2, else main itself
 function firstHeading() {
   const seen = x => { const r = x.getBoundingClientRect(), cs = getComputedStyle(x); return r.width > 2 && r.height > 2 && cs.visibility !== 'hidden' && !/inset\(50%\)|rect\(0/.test(cs.clipPath + cs.clip); };
   const x = [...document.querySelectorAll('main h1')].find(seen) || [...document.querySelectorAll('main h2')].find(seen) || $('#main');
@@ -243,7 +243,7 @@ function renderMirrorPanel() {
     h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'Oracle-style layout'), h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: copySQL }, 'Copy'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', disabled: noRows, 'aria-describedby': noRows ? 'practice-why' : null, onclick: () => setMode('practice') }, 'Practice this query')),
-    // a query with no rows makes a task any empty answer would pass, so it cannot be practised (ruling 2026-09-16 20:11 Q9)
+    // a query with no rows makes a task any empty answer would pass, so it cannot be practised
     noRows ? h('p', { class: 'explain', id: 'practice-why' }, 'Nothing to practise — this query returns no rows. Loosen a condition first.') : null,
     lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastBuildError || lastError || ''),
     h('p', { class: 'explain' }, 'Reading: ', h('b', {}, tablesLabel()), state.limit !== 'All' ? ' · top ' + state.limit + ' rows' : '', state.sort ? ' · sorted by ' + (colById(state.sort.col) || {}).label + ' ' + (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : '')
@@ -329,7 +329,7 @@ function resultTable(res, opts = {}) {
   const limit = opts.limit || Infinity; const mark = opts.mark || {};
   const miss = new Set(mark.miss || []), extra = new Set(mark.extra || []);
   const rows = res.rows.slice(0, limit);
-  // a column whose values are all numbers is right-aligned in the header too, like its cells (family tables, v3 Q7)
+  // a column whose values are all numbers is right-aligned in the header too, like its cells, as in the family's other tables
   const numeric = res.columns.map((_, j) => { const vals = res.rows.map(r => r[j]).filter(v => v !== null && v !== undefined); return vals.length > 0 && vals.every(v => typeof v === 'number'); });
   return h('table', { class: 'data' + (opts.compact ? ' compact' : '') },
     h('thead', {}, h('tr', {}, res.columns.map((c, j) => {
@@ -346,7 +346,7 @@ function resultTable(res, opts = {}) {
 }
 let colsOpen = false;
 // the Columns button, its checkboxes and the header buttons are rebuilt on every change: keep focus on the same control
-// (Enter on Columns, or Space on a checkbox, left focus on <body>; round-1 fix run, 2026-09-16)
+// (Enter on Columns, or Space on a checkbox, left focus on <body>; 2026-09-16)
 function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); restoreFocus(find); }
 function renderResultsPanel() {
   const r = $('#results');
@@ -383,7 +383,7 @@ document.addEventListener('click', () => { if (colsOpen) { colsOpen = false; ren
 // ── theme / help ──
 Appearance.bindToggle($('#theme'));   // ◐ switches light/dark only (appearance.js)
 Appearance.bindSettings($('#nl-settings-button'), { shortcuts: '? opens help. Turn it off if you use voice control. On by default.' });   // the gear: palette, light/dark, single-key shortcuts
-// the skip link goes to the first visible heading in main, without touching the address (ruling 2026-09-16 20:11 Q16)
+// the skip link goes to the first visible heading in main, without touching the address
 document.querySelector('.skip').addEventListener('click', e => { e.preventDefault(); firstHeading().focus(); });
 function openHelp() {
   const d = $('#dlg'); fill(d, 
@@ -396,7 +396,7 @@ function openHelp() {
   d.showModal();
 }
 $('#help').addEventListener('click', openHelp);
-// ? is a page-level single key, so the Settings switch can turn it off (WCAG 2.1.4; ruling 2026-09-16 20:11 Q3); the ? button still opens help
+// ? is a page-level single key, so the Settings switch can turn it off (WCAG 2.1.4); the ? button still opens help
 document.addEventListener('keydown', e => { if (e.key === '?' && Appearance.shortcutsOn() && !document.querySelector('dialog[open]') && !/input|textarea|select/i.test(e.target.tagName)) { e.preventDefault(); openHelp(); } });
 
 // ── boot ──
