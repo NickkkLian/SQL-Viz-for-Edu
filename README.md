@@ -1,5 +1,7 @@
 # Query Mirror
 
+![Query Mirror](.github/header.png)
+
 **Every click becomes the SQL behind it — practice is graded on results, not wording.**
 
 ![Query Mirror: tables on the left, the generated SELECT in the middle, the result below](docs/screenshot-explore.png)
