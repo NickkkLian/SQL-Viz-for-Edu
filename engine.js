@@ -705,7 +705,7 @@ function grade(expected, actual, opts){
 }
 // sql.js exec() returns nothing at all for a query that matches no rows, so the column names were lost: the explore table
 // dropped its header, and grading compared "0 columns" (a zero-row answer missing a column was graded correct against a
-// zero-row task; round-1 audit, 2026-09-16). A prepared statement names its columns before the first row. The page and
+// zero-row task; 2026-09-16). A prepared statement names its columns before the first row. The page and
 // check.mjs both read every result through this.
 function runQuery(database, sql){
   const st=database.prepare(sql);
