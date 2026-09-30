@@ -47,6 +47,18 @@ jobs:
           git show 5316da6:index.html > "$RUNNER_TEMP/explorer-5316da6.html"
           node tests/parity.mjs "$RUNNER_TEMP/explorer-5316da6.html"
 
+  boot-failure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      # a broken engine keeps its "SQLite could not start" alert (ubuntu-latest ships Google Chrome)
+      - run: node tests/boot-failure.mjs
+        env:
+          CHROME: /usr/bin/google-chrome
+
   hygiene:
     runs-on: ubuntu-latest
     steps:

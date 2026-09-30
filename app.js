@@ -23,6 +23,9 @@ const DB_LABEL = { hospital: 'Hospital', ecommerce: 'E-Commerce', movies: 'Movie
 
 // ── state ──
 let SQL = null, dbs = {}, ready = false;
+// failed: the engine did not start. Every render reads it, so no later update() (the 300ms loading timer, a click)
+// can put "Loading SQLite…" back over the error.
+let failed = false;
 let state, mode;
 ({ state, mode } = Q.decodeState(location.search));
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
@@ -169,7 +172,7 @@ function renderSubbar() {
     h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Dataset' }, Object.keys(Q.SCHEMA).map(db => h('button', { type: 'button', role: 'radio', 'aria-checked': String(db === state.db), onclick: () => setDB(db) }, DB_LABEL[db]))),
     h('span', { class: 'seg-label' }, 'Mode'),
     h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Mode' }, [['explore', 'Explore'], ['practice', 'Practice']].map(([m, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mode), onclick: () => setMode(m) }, l))),
-    h('span', { class: 'status ' + (ready ? 'ok' : slow ? 'busy' : 'wait'), id: 'status' }, ready || slow ? h('i') : null, ready ? 'SQLite ready · ' + Object.keys(Q.SCHEMA).length + ' datasets in memory' : slow ? 'Loading SQLite…' : '')
+    h('span', { class: 'status ' + (ready ? 'ok' : failed ? 'err' : slow ? 'busy' : 'wait'), id: 'status' }, ready || failed || slow ? h('i') : null, ready ? 'SQLite ready · ' + Object.keys(Q.SCHEMA).length + ' datasets in memory' : failed ? 'SQLite failed to load' : slow ? 'Loading SQLite…' : '')
   );
 }
 function renderTables() {
@@ -267,7 +270,7 @@ function renderPractice(m) {
   const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
   const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6, empty: 'This task matches no rows.' })
-    : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow ? 'Loading…' : ''));
+    : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow && !failed ? 'Loading…' : ''));
   fill(m, 
     h('div', { class: 'card-head' }, h('h2', {}, 'Practice'), expected ? h('span', { class: 'tag tag-neutral' }, expected.rows.length + ' row' + (expected.rows.length === 1 ? '' : 's') + ' expected') : null, ordered ? h('span', { class: 'tag tag-warning' }, 'row order counts') : null, h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: shareTask }, 'Copy task link')),
@@ -299,7 +302,7 @@ function runPractice() {
   const ed = $('#editor'); practice.answer = ed ? ed.value : practice.answer;
   practice.verdict = null; practice.result = null; practice.error = null; practice.errorFromSQLite = false;
   const sql = practice.answer.trim();
-  if (!ready) { toast('The engine is still loading', { alert: true }); return; }
+  if (!ready) { toast(failed ? 'SQLite could not start. Reload the page.' : 'The engine is still loading', { alert: true }); return; }
   if (!lastResult) { practice.error = 'the task has no result to compare with (' + (lastBuildError || lastError || 'nothing selected') + ') — go back to Explore and fix the task first'; renderMirror(); return; }
   if (!sql) { practice.error = 'write a SELECT first'; renderMirror(); return; }
   if (!Q.isSelectOnly(sql)) { practice.error = 'one statement, starting with SELECT (or WITH). Practice mode never runs anything else.'; renderMirror(); return; }
@@ -350,6 +353,7 @@ let colsOpen = false;
 function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); restoreFocus(find); }
 function renderResultsPanel() {
   const r = $('#results');
+  if (failed) { r.hidden = false; fill(r, engineFailed()); return; }
   r.hidden = mode === 'practice' && state.tables.length > 0;
   if (!state.tables.length) { fill(r, h('p', { class: 'none', style: 'font-size:var(--text-xs);color:var(--text-3)' }, 'Results appear here.')); return; }
   if (!ready) { fill(r, slow ? h('div', { class: 'loading' }, h('span', {}, 'Loading SQLite (650 KB, runs locally)…'), h('div', { class: 'bar' }, h('i', { id: 'ldbar' }))) : null); return; }
@@ -419,11 +423,13 @@ async function boot() {
     ready = true; update();
   } catch (e) {
     console.error(e);
-    const st = $('#status'); if (st) { st.className = 'status err'; st.replaceChildren(h('i'), 'SQLite failed to load'); }
-    // what happened and what to do, without the engine's own exception text (it is in the console); Reload is the fix
-    fill($('#results'), h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The SQL engine ships inside this folder (vendor/) and did not load in this browser. Reload; if it persists, the files were served incompletely.'),
-      h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => location.reload() }, 'Reload'))));
+    failed = true; update();   // the status line and #results read `failed` (renderSubbar, renderResultsPanel)
   }
+}
+// what happened and what to do, without the engine's own exception text (it is in the console); Reload is the fix
+function engineFailed() {
+  return h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The SQL engine ships inside this folder (vendor/) and did not load in this browser. Reload; if it persists, the files were served incompletely.'),
+    h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => location.reload() }, 'Reload')));
 }
 boot();
 })();
