@@ -74,7 +74,13 @@ node tests/parity.mjs /tmp/explorer-5316da6.html
 
 The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `5316da6`), runs it in a sandbox over every fixture state, and requires `engine.js` to produce byte-identical SQL.
 
-CI runs all three on every push (`.github/workflows/check.yml`).
+```bash
+node tests/boot-failure.mjs
+```
+
+Opens the page in headless Chrome with a broken engine (truncated, garbage, empty and non-base64 wasm) and requires the "SQLite could not start" alert and its Reload button to still be there after 1.5 s, past the 300 ms loading timer. A copy with the real engine must reach "SQLite ready", so a harness that sees nothing cannot pass. Set `CHROME=/path/to/chrome` if Chrome is not in a usual place.
+
+CI runs all of these on every push (`.github/workflows/check.yml`).
 
 ## Self-hosted engine
 
