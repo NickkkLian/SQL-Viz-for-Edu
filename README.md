@@ -1,14 +1,14 @@
 # Query Mirror
 
-![Query Mirror](.github/header.png)
-
 **Every click becomes the SQL behind it — practice is graded on results, not wording.**
 
-![Query Mirror: tables on the left, the generated SELECT in the middle, the result below](docs/screenshot-explore.png)
+**Try it:** [open it with the query in the screenshot already built](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0) — two tables ticked, a two-join `SELECT`, 13 result rows — or [start from a blank page](https://nickkklian.github.io/SQL-Viz-for-Edu/). No build, no server, no account, nothing uploaded.
+
+[![Query Mirror: tables on the left, the generated SELECT in the middle, the result below](docs/screenshot-explore.png)](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0)
+
+![Query Mirror](.github/header.png)
 
 Students pick tables and set conditions in plain English; the mirror shows the single `SELECT` those clicks produce and runs it in SQLite, inside the tab. Practice mode turns it around: it hides the mirror, states the result you have to reproduce, and grades the SQL you write by comparing result sets — so a correct answer written a different way still passes.
-
-**[Open it →](https://nickkklian.github.io/SQL-Viz-for-Edu/)** · no build, no server, no account, nothing uploaded.
 
 ## What it does
 
