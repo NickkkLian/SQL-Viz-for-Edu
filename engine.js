@@ -488,6 +488,7 @@ const OPS_TEXT=[
   {label:'is not',       sql:'!='},
   {label:'contains',     sql:'LIKE_C'},
   {label:'starts with',  sql:'LIKE_S'},
+  {label:'LIKE',         sql:'LIKE'},
   {label:'is blank',     sql:'IS_EMPTY'},
   {label:'has a value',  sql:'NOT_EMPTY'}
 ];
@@ -512,8 +513,68 @@ const HAV_OPS=[
 ];
 const LIMITS=['10','25','50','All'];
 
+// Fixed, versioned exercise targets. Reference queries are deliberately handwritten, so checks can
+// compare each click-built target with a second expression of the task in the real SQLite engine.
+const EXERCISES={
+  hospital:[
+    {id:'names',title:'Patient names',prompt:'Return every patient’s full name and city.',hint:'Join first_name and last_name with a space using ||.',tables:['patient'],cols:['pa_name','pa_city'],referenceSQL:"SELECT first_name||' '||last_name, city FROM patient"},
+    {id:'fees',title:'Fees above 200',prompt:'Return appointment dates and fees greater than 200.',hint:'Filter appointment with WHERE fee > 200.',tables:['appointment'],cols:['ap_date','ap_fee'],filters:[{col:'ap_fee',op:'is more than',val:'200'}],referenceSQL:'SELECT appt_date, fee FROM appointment WHERE fee > 200'},
+    {id:'and',title:'Combine with AND',prompt:'Return appointment dates and fees greater than 150 and less than 250.',hint:'Both fee comparisons must hold: connect them with AND.',tables:['appointment'],cols:['ap_date','ap_fee'],filters:[{col:'ap_fee',op:'is more than',val:'150'},{col:'ap_fee',op:'is less than',val:'250'}],referenceSQL:'SELECT appt_date, fee FROM appointment WHERE fee > 150 AND fee < 250'},
+    {id:'or',title:'Combine with OR',prompt:'Return names and cities of patients in Toronto or Vancouver.',hint:'Either city can match: use OR between the equalities.',tables:['patient'],cols:['pa_name','pa_city'],filters:[{col:'pa_city',op:'equals',val:'Toronto'},{col:'pa_city',op:'equals',val:'Vancouver',join:'OR'}],referenceSQL:"SELECT first_name||' '||last_name, city FROM patient WHERE city='Toronto' OR city='Vancouver'"},
+    {id:'like',title:'Names with LIKE',prompt:'Return full names of patients whose first name starts with E.',hint:"LIKE 'E%' matches E followed by any number of characters.",tables:['patient'],cols:['pa_name'],filters:[{col:'pa_name',op:'LIKE',val:'E%'}],referenceSQL:"SELECT first_name||' '||last_name FROM patient WHERE first_name LIKE 'E%'"},
+    {id:'limit',title:'First ten names',prompt:'Return the first ten patient names in ascending alphabetical order.',hint:'ORDER BY the full name, then LIMIT 10.',tables:['patient'],cols:['pa_name'],sort:{col:'pa_name',dir:'ASC'},limit:'10',referenceSQL:"SELECT first_name||' '||last_name AS name FROM patient ORDER BY name ASC LIMIT 10"},
+    {id:'join',title:'Patients and doctors',prompt:'Return patient and doctor full names for every appointment.',hint:'Join patient to appointment, then appointment to doctor, using their ID keys.',tables:['patient','doctor'],cols:['pa_name','dr_name'],referenceSQL:"SELECT p.first_name||' '||p.last_name, d.first_name||' '||d.last_name FROM patient p JOIN appointment a ON a.patient_id=p.patient_id JOIN doctor d ON d.doctor_id=a.doctor_id"},
+    {id:'groups',title:'Cities with repeat patients',prompt:'Return each city with more than one patient, and its patient count.',hint:'GROUP BY city; use COUNT(patient_id) and HAVING COUNT(patient_id) > 1.',tables:['patient'],cols:['pa_city','pa_id'],group:{col:'pa_city',aggs:{pa_id:'COUNT'},having:[{aggCol:'pa_id|COUNT',op:'is more than',val:'1'}]},referenceSQL:'SELECT city, COUNT(patient_id) FROM patient GROUP BY city HAVING COUNT(patient_id)>1'}
+  ],
+  ecommerce:[
+    {id:'names',title:'Product shelf',prompt:'Return every product name and unit price.',hint:'Read prod_name and unit_price from product.',tables:['product'],cols:['pr_name','pr_price'],referenceSQL:'SELECT prod_name, unit_price FROM product'},
+    {id:'prices',title:'Prices above 50',prompt:'Return product names and unit prices greater than 50.',hint:'Use WHERE unit_price > 50.',tables:['product'],cols:['pr_name','pr_price'],filters:[{col:'pr_price',op:'is more than',val:'50'}],referenceSQL:'SELECT prod_name, unit_price FROM product WHERE unit_price>50'},
+    {id:'and',title:'Affordable stock',prompt:'Return names, stock quantities and unit prices for products with stock above 50 and price below 50.',hint:'Connect stock_qty > 50 and unit_price < 50 with AND.',tables:['product'],cols:['pr_name','pr_stk','pr_price'],filters:[{col:'pr_stk',op:'is more than',val:'50'},{col:'pr_price',op:'is less than',val:'50'}],referenceSQL:'SELECT prod_name, stock_qty, unit_price FROM product WHERE stock_qty>50 AND unit_price<50'},
+    {id:'or',title:'Two departments',prompt:'Return names and categories of products in Sports or Office.',hint:'Use OR between the two category equalities.',tables:['product'],cols:['pr_name','pr_cat'],filters:[{col:'pr_cat',op:'equals',val:'Sports'},{col:'pr_cat',op:'equals',val:'Office',join:'OR'}],referenceSQL:"SELECT prod_name, category FROM product WHERE category='Sports' OR category='Office'"},
+    {id:'like',title:'Product name pattern',prompt:'Return names of products containing the word Stand.',hint:"Use prod_name LIKE '%Stand%'.",tables:['product'],cols:['pr_name'],filters:[{col:'pr_name',op:'LIKE',val:'%Stand%'}],referenceSQL:"SELECT prod_name FROM product WHERE prod_name LIKE '%Stand%'"},
+    {id:'limit',title:'Ten products by name',prompt:'Return the first ten product names in ascending alphabetical order.',hint:'ORDER BY prod_name ASC, then LIMIT 10.',tables:['product'],cols:['pr_name'],sort:{col:'pr_name',dir:'ASC'},limit:'10',referenceSQL:'SELECT prod_name FROM product ORDER BY prod_name ASC LIMIT 10'},
+    {id:'join',title:'Customers and orders',prompt:'Return customer full names, order dates and order statuses for every order.',hint:'Join customer.cust_id to order_hdr.cust_id.',tables:['customer','order_hdr'],cols:['cu_name','oh_date','oh_status'],referenceSQL:"SELECT c.first_name||' '||c.last_name, o.order_date, o.status FROM customer c JOIN order_hdr o ON o.cust_id=c.cust_id"},
+    {id:'groups',title:'Average category price',prompt:'Return categories whose average unit price exceeds 50, with that average.',hint:'GROUP BY category and HAVING AVG(unit_price) > 50.',tables:['product'],cols:['pr_cat','pr_price'],group:{col:'pr_cat',aggs:{pr_price:'AVG'},having:[{aggCol:'pr_price|AVG',op:'is more than',val:'50'}]},referenceSQL:'SELECT category, AVG(unit_price) FROM product GROUP BY category HAVING AVG(unit_price)>50'}
+  ],
+  movies:[
+    {id:'names',title:'Film catalogue',prompt:'Return every film title and release year.',hint:'Read title and release_year from film.',tables:['film'],cols:['fi_title','fi_year'],referenceSQL:'SELECT title, release_year FROM film'},
+    {id:'ratings',title:'Highly rated films',prompt:'Return film titles and ratings of at least 8.5.',hint:'Use WHERE rating >= 8.5.',tables:['film'],cols:['fi_title','fi_rating'],filters:[{col:'fi_rating',op:'is at least',val:'8.5'}],referenceSQL:'SELECT title, rating FROM film WHERE rating>=8.5'},
+    {id:'and',title:'Recent and highly rated',prompt:'Return titles, release years and ratings for films released from 2010 onward with ratings of at least 8.',hint:'Both conditions must hold: release_year >= 2010 AND rating >= 8.',tables:['film'],cols:['fi_title','fi_year','fi_rating'],filters:[{col:'fi_year',op:'is at least',val:'2010'},{col:'fi_rating',op:'is at least',val:'8'}],referenceSQL:'SELECT title, release_year, rating FROM film WHERE release_year>=2010 AND rating>=8'},
+    {id:'or',title:'Two genres',prompt:'Return titles and genres of Drama or Sci-Fi films.',hint:'Connect genre equalities with OR.',tables:['film'],cols:['fi_title','fi_genre'],filters:[{col:'fi_genre',op:'equals',val:'Drama'},{col:'fi_genre',op:'equals',val:'Sci-Fi',join:'OR'}],referenceSQL:"SELECT title, genre FROM film WHERE genre='Drama' OR genre='Sci-Fi'"},
+    {id:'like',title:'Titles beginning with The',prompt:'Return titles beginning with The followed by a space.',hint:"Use title LIKE 'The %'. The space is part of the pattern.",tables:['film'],cols:['fi_title'],filters:[{col:'fi_title',op:'LIKE',val:'The %'}],referenceSQL:"SELECT title FROM film WHERE title LIKE 'The %'"},
+    {id:'limit',title:'First ten film titles',prompt:'Return the first ten film titles in ascending alphabetical order.',hint:'ORDER BY title ASC, then LIMIT 10.',tables:['film'],cols:['fi_title'],sort:{col:'fi_title',dir:'ASC'},limit:'10',referenceSQL:'SELECT title FROM film ORDER BY title ASC LIMIT 10'},
+    {id:'join',title:'Films and directors',prompt:'Return film titles and director names for each credited contribution.',hint:'Join film through cast_link to director.',tables:['film','director'],cols:['fi_title','di_name'],referenceSQL:'SELECT f.title, d.full_name FROM film f JOIN cast_link c ON c.film_id=f.film_id JOIN director d ON d.director_id=c.director_id'},
+    {id:'groups',title:'Highly rated genres',prompt:'Return genres with an average film rating above 8, and that average.',hint:'GROUP BY genre and HAVING AVG(rating) > 8.',tables:['film'],cols:['fi_genre','fi_rating'],group:{col:'fi_genre',aggs:{fi_rating:'AVG'},having:[{aggCol:'fi_rating|AVG',op:'is more than',val:'8'}]},referenceSQL:'SELECT genre, AVG(rating) FROM film GROUP BY genre HAVING AVG(rating)>8'}
+  ],
+  university:[
+    {id:'names',title:'Student directory',prompt:'Return every student’s full name and major.',hint:'Join first_name and last_name with a space using ||.',tables:['student'],cols:['st_name','st_major'],referenceSQL:"SELECT first_name||' '||last_name, major FROM student"},
+    {id:'gpa',title:'GPA at least 3.5',prompt:'Return student names and GPAs of at least 3.5.',hint:'Use WHERE gpa >= 3.5.',tables:['student'],cols:['st_name','st_gpa'],filters:[{col:'st_gpa',op:'is at least',val:'3.5'}],referenceSQL:"SELECT first_name||' '||last_name, gpa FROM student WHERE gpa>=3.5"},
+    {id:'and',title:'Recent high achievers',prompt:'Return names, enrollment years and GPAs for students enrolled from 2022 onward with a GPA of at least 3.5.',hint:'Connect enrollment_year >= 2022 and gpa >= 3.5 with AND.',tables:['student'],cols:['st_name','st_year','st_gpa'],filters:[{col:'st_year',op:'is at least',val:'2022'},{col:'st_gpa',op:'is at least',val:'3.5'}],referenceSQL:"SELECT first_name||' '||last_name, enrollment_year, gpa FROM student WHERE enrollment_year>=2022 AND gpa>=3.5"},
+    {id:'or',title:'Two majors',prompt:'Return names and majors of Biology or Psychology students.',hint:'Either major can match: use OR.',tables:['student'],cols:['st_name','st_major'],filters:[{col:'st_major',op:'equals',val:'Biology'},{col:'st_major',op:'equals',val:'Psychology',join:'OR'}],referenceSQL:"SELECT first_name||' '||last_name, major FROM student WHERE major='Biology' OR major='Psychology'"},
+    {id:'like',title:'Course code pattern',prompt:'Return course codes and names for codes beginning with CS.',hint:"Use course_id LIKE 'CS%'.",tables:['course'],cols:['co_id','co_name'],filters:[{col:'co_id',op:'LIKE',val:'CS%'}],referenceSQL:"SELECT course_id, course_name FROM course WHERE course_id LIKE 'CS%'"},
+    {id:'limit',title:'First ten students',prompt:'Return the first ten student names in ascending alphabetical order.',hint:'ORDER BY the full name, then LIMIT 10.',tables:['student'],cols:['st_name'],sort:{col:'st_name',dir:'ASC'},limit:'10',referenceSQL:"SELECT first_name||' '||last_name AS name FROM student ORDER BY name ASC LIMIT 10"},
+    {id:'join',title:'Students and courses',prompt:'Return student full names and course names for every enrollment.',hint:'Join student through enrollment to course.',tables:['student','course'],cols:['st_name','co_name'],referenceSQL:"SELECT s.first_name||' '||s.last_name, c.course_name FROM student s JOIN enrollment e ON e.student_id=s.student_id JOIN course c ON c.course_id=e.course_id"},
+    {id:'groups',title:'Average GPA by major',prompt:'Return majors whose average GPA exceeds 3.4, with that average.',hint:'GROUP BY major and HAVING AVG(gpa) > 3.4.',tables:['student'],cols:['st_major','st_gpa'],group:{col:'st_major',aggs:{st_gpa:'AVG'},having:[{aggCol:'st_gpa|AVG',op:'is more than',val:'3.4'}]},referenceSQL:'SELECT major, AVG(gpa) FROM student GROUP BY major HAVING AVG(gpa)>3.4'}
+  ]
+};
+function exerciseState(db,id){
+  const task=(EXERCISES[db]||[]).find(t=>t.id===id);
+  if(!task) return null;
+  const {tables,cols,filters=[],sort=null,limit='All',group=null}=task;
+  return JSON.parse(JSON.stringify({...emptyState(db),tables,cols,filters,sort,limit,group}));
+}
+function progressKey(db,id){return 'query-mirror.exercises.v1.'+db+'.'+id;}
+function loadProgress(storage,db,id){
+  try{const v=JSON.parse(storage.getItem(progressKey(db,id)));return {answer:typeof v?.answer==='string'?v.answer:'',completed:v?.completed===true};}
+  catch(e){return {answer:'',completed:false};}
+}
+function saveProgress(storage,db,id,answer,completed){
+  try{storage.setItem(progressKey(db,id),JSON.stringify({answer:String(answer),completed:!!completed||loadProgress(storage,db,id).completed}));return true;}
+  catch(e){return false;}
+}
+
 // ── STATE ──
-// state = { db, tables:[selected, in click order], cols:[visible column ids], filters:[{col,op,val}],
+// state = { db, tables:[selected, in click order], cols:[visible column ids], filters:[{col,op,val,join?:'AND'|'OR'}],
 //           sort:{col,dir}|null, limit:'10'|'25'|'50'|'All',
 //           group:{col, aggs:{colId:fn}, having:[{aggCol:'colId|FN',op,val}]}|null, distinct:bool }
 function emptyState(db){ return {db, tables:[], cols:[], filters:[], sort:null, limit:'All', group:null, distinct:false}; }
@@ -576,6 +637,7 @@ function opToSQL(col,op,val){
     case 'is at most':  return ex+'<='+Number(v);
     case 'contains':    return ex+" LIKE '%"+safe.replace(/%/g,'\\%')+"%'";
     case 'starts with': return ex+" LIKE '"+safe.replace(/%/g,'\\%')+"%'";
+    case 'LIKE':        return ex+" LIKE '"+safe+"'";
     case 'is blank':    return '('+ex+" IS NULL OR CAST("+ex+" AS TEXT)='')";
     case 'has a value': return '('+ex+" IS NOT NULL AND CAST("+ex+" AS TEXT)!='')";
   }
@@ -607,8 +669,8 @@ function buildSQL(state){
     selectExpr=(state.distinct?'DISTINCT ':'')+selCols.map(c=>c.expr+' AS "'+c.label+'"').join(', ');
   }
   let sql='SELECT '+selectExpr+' FROM '+fromSQL;
-  const conds=(state.filters||[]).map(f=>{const col=allCols.find(c=>c.id===f.col); if(!col) return null; return opToSQL(col,f.op,f.val);}).filter(Boolean);
-  if(conds.length) sql+=' WHERE '+conds.join(' AND ');
+  const conds=(state.filters||[]).map(f=>{const col=allCols.find(c=>c.id===f.col); const text=col&&opToSQL(col,f.op,f.val); return text?{text,join:f.join==='OR'?'OR':'AND'}:null;}).filter(Boolean);
+  if(conds.length) sql+=' WHERE '+conds.map((c,i)=>(i?' '+c.join+' ':'')+c.text).join('');
   if(group){
     const gbCol=allCols.find(c=>c.id===group.col);
     if(gbCol) sql+=' GROUP BY '+[gbCol.expr,...extraGroupByCols].join(', ');
@@ -625,12 +687,13 @@ function buildSQL(state){
   return {sql};
 }
 
-// ── SQL DISPLAY (Oracle-style layout; LIMIT is shown as a ROWNUM comment because Oracle has no LIMIT) ──
+// ── SQL DISPLAY (executable SQLite; protect quoted values/identifiers before laying out clauses) ──
 function formatSQL(sql) {
-  sql = sql.replace(/\bLIMIT\s+(\d+)\b/gi, function(m,n){ return '/* Top ' + n + ' rows via ROWNUM */'; });
-  const CLAUSE = /\b(SELECT DISTINCT|SELECT|FROM|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL OUTER JOIN|FULL JOIN|JOIN|ON|WHERE|AND|OR|GROUP BY|HAVING|ORDER BY)\b/gi;
+  const quoted=[];
+  sql=sql.replace(/'(?:''|[^'])*'|"(?:""|[^"])*"/g, s=>{quoted.push(s);return '\u0000'+(quoted.length-1)+'\u0000';});
+  const CLAUSE = /\b(SELECT DISTINCT|SELECT|FROM|INNER JOIN|LEFT JOIN|RIGHT JOIN|FULL OUTER JOIN|FULL JOIN|JOIN|ON|WHERE|AND|OR|GROUP BY|HAVING|ORDER BY|LIMIT)\b/gi;
   const NL = '\n';
-  const mainClauses  = ['SELECT','SELECT DISTINCT','FROM','WHERE','GROUP BY','HAVING','ORDER BY'];
+  const mainClauses  = ['SELECT','SELECT DISTINCT','FROM','WHERE','GROUP BY','HAVING','ORDER BY','LIMIT'];
   const joinClauses  = ['INNER JOIN','LEFT JOIN','RIGHT JOIN','FULL OUTER JOIN','FULL JOIN','JOIN'];
   let parts = sql.replace(/\s+/g,' ').trim().split(CLAUSE);
   let out = '';
@@ -651,7 +714,7 @@ function formatSQL(sql) {
       } else out += ' ' + p;
     }
   }
-  return out.trim();
+  return out.trim().replace(/\u0000(\d+)\u0000/g, (_,i)=>quoted[+i]);
 }
 
 // ── PRACTICE GRADER ──
@@ -722,20 +785,21 @@ function isSelectOnly(sql){
 // ── URL CODEC ──  ?db=movies&tables=film,director&q=<base64url json>&mode=practice
 function b64uEncode(str){ const b=typeof Buffer!=='undefined'?Buffer.from(str,'utf8').toString('base64'):btoa(unescape(encodeURIComponent(str))); return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
 function b64uDecode(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4) s+='='; return typeof Buffer!=='undefined'?Buffer.from(s,'base64').toString('utf8'):decodeURIComponent(escape(atob(s))); }
-function encodeState(state, mode){
+function encodeState(state, mode, exercise){
   const p=new URLSearchParams();
   p.set('db', state.db);
   if(state.tables&&state.tables.length) p.set('tables', state.tables.join(','));
   const q={};
   const dflt=defaultCols(state.db, state.tables||[]);
   if(state.cols&&state.cols.join('|')!==dflt.join('|')) q.c=state.cols;
-  if(state.filters&&state.filters.length) q.f=state.filters.map(f=>[f.col,f.op,f.val==null?'':String(f.val)]);
+  if(state.filters&&state.filters.length) q.f=state.filters.map(f=>{const a=[f.col,f.op,f.val==null?'':String(f.val)]; if(f.join==='OR') a.push('OR'); return a;});
   if(state.sort&&state.sort.col) q.s=[state.sort.col, state.sort.dir==='DESC'?'DESC':'ASC'];
   if(state.limit&&state.limit!=='All') q.l=state.limit;
   if(state.group&&state.group.col){ q.g=state.group.col; const a=Object.entries(state.group.aggs||{}).filter(([,v])=>v&&v!=='none'); if(a.length) q.a=a; const h=(state.group.having||[]).map(x=>[x.aggCol,x.op,x.val==null?'':String(x.val)]); if(h.length) q.h=h; }
   if(state.distinct) q.d=1;
   if(Object.keys(q).length) p.set('q', b64uEncode(JSON.stringify(q)));
   if(mode==='practice') p.set('mode','practice');
+  if(EXERCISES[state.db]&&EXERCISES[state.db].some(t=>t.id===exercise)) p.set('exercise',exercise);
   return '?'+p.toString();
 }
 // Everything is validated against the schema; unknown tables/columns/operators are dropped, never trusted.
@@ -750,7 +814,7 @@ function decodeState(search){
   if(!q||typeof q!=='object') q={};
   const cols=availableCols(db, tables); const byId=id=>cols.find(c=>c.id===id);
   if(Array.isArray(q.c)){ const c=q.c.filter(id=>byId(id)); if(c.length) st.cols=c; }
-  if(Array.isArray(q.f)) st.filters=q.f.filter(f=>Array.isArray(f)&&byId(f[0])).map(f=>{ const col=byId(f[0]); const ops=col.type==='number'?OPS_NUM:OPS_TEXT; return {col:f[0], op:ops.some(o=>o.label===f[1])?f[1]:'equals', val:String(f[2]==null?'':f[2])}; });
+  if(Array.isArray(q.f)) st.filters=q.f.filter(f=>Array.isArray(f)&&byId(f[0])).map(f=>{ const col=byId(f[0]); const ops=col.type==='number'?OPS_NUM:OPS_TEXT; const fState={col:f[0], op:ops.some(o=>o.label===f[1])?f[1]:'equals', val:String(f[2]==null?'':f[2])}; if(f[3]==='OR') fState.join='OR'; return fState; });
   if(Array.isArray(q.s)&&byId(q.s[0])) st.sort={col:q.s[0], dir:q.s[1]==='DESC'?'DESC':'ASC'};
   if(LIMITS.includes(String(q.l))) st.limit=String(q.l);
   if(q.g&&byId(q.g)){
@@ -759,10 +823,11 @@ function decodeState(search){
     st.group={col:q.g, aggs, having};
   }
   st.distinct=q.d===1||q.d==='1'||q.d===true;
-  return {state:st, mode};
+  const exercise=EXERCISES[db].some(t=>t.id===p.get('exercise'))?p.get('exercise'):null;
+  return {state:exercise?exerciseState(db,exercise):st, mode:exercise?'practice':mode, exercise};
 }
 
-return { VERSION, DDL, SCHEMA, OPS_TEXT, OPS_NUM, AGG_LABELS, HAV_OPS, LIMITS,
+return { VERSION, DDL, SCHEMA, OPS_TEXT, OPS_NUM, AGG_LABELS, HAV_OPS, LIMITS, EXERCISES, exerciseState, loadProgress, saveProgress,
          emptyState, bridgesFor, allTables, availableCols, defaultCols, findCol, buildFrom, opToSQL, buildSQL,
          formatSQL, grade, runQuery, isSelectOnly, encodeState, decodeState };
 });

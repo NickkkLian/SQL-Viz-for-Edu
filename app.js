@@ -26,12 +26,21 @@ let SQL = null, dbs = {}, ready = false;
 // failed: the engine did not start. Every render reads it, so no later update() (the 300ms loading timer, a click)
 // can put "Loading SQLite…" back over the error.
 let failed = false;
-let state, mode;
-({ state, mode } = Q.decodeState(location.search));
+let state, mode, exercise;
+({ state, mode, exercise } = Q.decodeState(location.search));
+// A first visit shows an actual result immediately; explicit legacy/deep links retain their state.
+if (!location.search) state = Q.exerciseState('hospital', 'names');
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
 // the loading state appears only when loading takes 300ms or more (a shorter wait shows nothing, so nothing flashes)
 let slow = false;
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
+let progressStorage = null, progressAvailable = false;
+try { progressStorage = window.localStorage; progressStorage.setItem('query-mirror.probe', '1'); progressStorage.removeItem('query-mirror.probe'); progressAvailable = true; } catch (e) {}
+if (exercise) practice.answer = Q.loadProgress(progressStorage, state.db, exercise).answer;
+const currentExercise = () => Q.EXERCISES[state.db].find(t => t.id === exercise);
+function saveDraft(completed = false) {
+  if (exercise) progressAvailable = Q.saveProgress(progressStorage, state.db, exercise, practice.answer, completed);
+}
 
 // ── helpers ──
 // Table cards show the row count SQLite reports for the loaded data, not a number typed into the schema.
@@ -42,7 +51,7 @@ function toast(msg, opts = {}) {
   $('#toasts').append(t); requestAnimationFrame(() => t.classList.remove('enter'));
   setTimeout(() => { t.classList.add('leave'); setTimeout(() => t.remove(), 200); }, opts.ms || 2600);
 }
-function syncURL() { history.replaceState(null, '', Q.encodeState(state, mode)); }
+function syncURL() { history.replaceState(null, '', Q.encodeState(state, mode, exercise)); }
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 function highlightSQL(sql) {
   let s = escapeHtml(sql);
@@ -54,7 +63,7 @@ function highlightSQL(sql) {
   s = s.replace(/\b(INNER\s+JOIN|LEFT\s+JOIN|RIGHT\s+JOIN|FULL\s+OUTER\s+JOIN|FULL\s+JOIN)\b/gi, m => tok('ska', m.replace(/\s+/g, ' ').toUpperCase()));
   s = s.replace(/\b(ON|AND|OR|NOT|IN|BETWEEN|LIKE|IS\s+NOT\s+NULL|IS\s+NULL)\b/gi, m => tok('ska', m.replace(/\s+/g, ' ').toUpperCase()));
   s = s.replace(/\b(SELECT\s+DISTINCT|GROUP\s+BY|ORDER\s+BY)\b/gi, m => tok('sk', m.replace(/\s+/g, ' ').toUpperCase()));
-  s = s.replace(/\b(SELECT|FROM|WHERE|HAVING|DISTINCT|AS|ASC|DESC|NULL|TEXT)\b/gi, m => tok('sk', m.toUpperCase()));
+  s = s.replace(/\b(SELECT|FROM|WHERE|HAVING|LIMIT|DISTINCT|AS|ASC|DESC|NULL|TEXT)\b/gi, m => tok('sk', m.toUpperCase()));
   s = s.replace(/(&lt;&gt;|!=|&gt;=|&lt;=|=|&gt;|&lt;)/g, m => tok('sop', m));
   s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, m => tok('sn', m));
   s = s.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\./g, (m, alias) => tok('st', alias) + '.');
@@ -70,8 +79,15 @@ const tablesLabel = () => {
 };
 
 // ── state mutations ──
-function setDB(db) { if (db === state.db) return; state = Q.emptyState(db); resetPractice(); update(); }
-function setMode(m) { if (m === mode) return; mode = m; resetPractice(); update(); if (m === 'practice') setTimeout(() => { const ed = $('#editor'); if (ed) ed.focus(); }, 0); }
+function setDB(db) { if (db === state.db) return; exercise = null; state = Q.emptyState(db); resetPractice(); update(); }
+function setMode(m) { if (m === mode) return; exercise = null; mode = m; resetPractice(); update(); if (m === 'practice') setTimeout(() => { const ed = $('#editor'); if (ed) ed.focus(); }, 0); }
+function openExercise(id) {
+  if (!id) { exercise = null; mode = 'explore'; resetPractice(); update(); return; }
+  const target = Q.exerciseState(state.db, id); if (!target) return;
+  state = target; exercise = id; mode = 'practice'; resetPractice();
+  practice.answer = Q.loadProgress(progressStorage, state.db, id).answer;
+  update();
+}
 function resetPractice() { practice.answer = ''; practice.verdict = null; practice.result = null; practice.error = null; practice.revealed = false; practice.showAll = false; }
 function toggleTable(t) {
   const i = state.tables.indexOf(t);
@@ -149,11 +165,22 @@ function update(opts = {}) { const find = focusKey(document.activeElement); upda
 function updatePanels(opts) {
   runMirror();
   syncURL();
-  renderSubbar(); renderTables();
+  renderSubbar(); renderExercises(); renderTables();
+  $('#controls').hidden = !!exercise;
   // Value boxes call update({controls:false}): rebuilding the panel on every keystroke would replace the
   // focused <input> and drop the caret after the first character.
   if (opts.controls !== false) renderControls();
   renderMirror(); renderResults();
+}
+function renderExercises() {
+  const tasks = Q.EXERCISES[state.db];
+  const completed = tasks.filter(t => Q.loadProgress(progressStorage, state.db, t.id).completed).length;
+  fill($('#exercises'),
+    h('label', { for: 'exercise-select' }, DB_LABEL[state.db] + ' exercises'),
+    h('select', { id: 'exercise-select', class: 'ctl-sel', onchange: e => openExercise(e.target.value) },
+      h('option', { value: '', selected: !exercise }, 'Explore freely · or choose a task'),
+      tasks.map((t, i) => h('option', { value: t.id, selected: exercise === t.id }, (i + 1) + '. ' + t.title + (Q.loadProgress(progressStorage, state.db, t.id).completed ? ' ✓' : '')))),
+    h('span', { id: 'exercise-progress', role: 'status' }, completed + ' / ' + tasks.length + ' complete · ' + (progressAvailable ? 'saved in this browser' : 'saving unavailable')));
 }
 function runMirror() {
   const prevSQL = lastSQL;
@@ -181,7 +208,7 @@ function renderTables() {
     sc.order.filter(t => !sc.tables[t].bridge).map(t => {
       const on = state.tables.includes(t);
       return h('li', {}, h('label', { class: on ? 'on' : '' },
-        h('input', { type: 'checkbox', checked: on, onchange: () => toggleTable(t), 'aria-label': sc.tables[t].label }),
+        h('input', { type: 'checkbox', checked: on, disabled: !!exercise, onchange: () => toggleTable(t), 'aria-label': sc.tables[t].label }),
         h('span', {}, sc.tables[t].label), h('span', { class: 'cnt' }, (ROWCOUNT[state.db] && ROWCOUNT[state.db][t] != null ? ROWCOUNT[state.db][t] : '…') + ' rows')));
     }),
     bridges.length ? h('li', {}, h('div', { class: 'sect' }, 'Joined automatically')) : null,
@@ -210,8 +237,10 @@ function renderControls() {
         if (col.opts && !document.getElementById('dl-' + col.id)) document.body.append(h('datalist', { id: 'dl-' + col.id }, col.opts.map(o => h('option', { value: o }))));
       }
       row.append(h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { state.filters.splice(i, 1); update(); } }, '×'));
-      return row;
-    }) : h('p', { class: 'none' }, 'No conditions — every row passes.'));
+      return [i ? sel([{ v: 'AND', t: 'AND · both must match' }, { v: 'OR', t: 'OR · either can match' }], f.join || 'AND', v => { f.join = v; update(); }, { 'aria-label': 'Join condition ' + (i + 1) }) : null,
+        row, f.op === 'LIKE' ? h('p', { class: 'none' }, '% matches any text; _ matches one character.') : null];
+    }) : h('p', { class: 'none' }, 'No conditions — every row passes.'),
+    state.filters.length > 1 ? h('p', { class: 'none' }, 'SQL evaluates AND before OR. The mirror shows the exact expression.') : null);
   // Summarize
   const g = state.group;
   const numCols = all.filter(c => c.type === 'number' && (!g || c.id !== g.col));
@@ -243,7 +272,7 @@ function renderMirrorPanel() {
   if (mode === 'practice') { renderPractice(m); return; }
   const noRows = !!lastResult && lastResult.rows.length === 0;
   fill(m, 
-    h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'Oracle-style layout'), h('span', { class: 'spacer' }),
+    h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'SQLite'), h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: copySQL }, 'Copy'),
       h('button', { type: 'button', class: 'btn btn-primary btn-sm', disabled: noRows, 'aria-describedby': noRows ? 'practice-why' : null, onclick: () => setMode('practice') }, 'Practice this query')),
     // a query with no rows makes a task any empty answer would pass, so it cannot be practised
@@ -267,7 +296,7 @@ function renderPractice(m) {
     return;
   }
   const v = practice.verdict;
-  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
+  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; saveDraft(); }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
   const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6, empty: 'This task matches no rows.' })
     : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow && !failed ? 'Loading…' : ''));
@@ -275,7 +304,8 @@ function renderPractice(m) {
     h('div', { class: 'card-head' }, h('h2', {}, 'Practice'), expected ? h('span', { class: 'tag tag-neutral' }, expected.rows.length + ' row' + (expected.rows.length === 1 ? '' : 's') + ' expected') : null, ordered ? h('span', { class: 'tag tag-warning' }, 'row order counts') : null, h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: shareTask }, 'Copy task link')),
     h('div', { class: 'task' },
-      h('p', { class: 'ask' }, 'Write one SELECT that returns exactly this result from the ', h('b', {}, DB_LABEL[state.db]), ' dataset — reading ', h('b', {}, tablesLabel()), '. The controls on the left say it in plain English.'),
+      h('p', { class: 'ask' }, currentExercise() ? currentExercise().prompt : ['Write one SELECT that returns exactly this result from the ', h('b', {}, DB_LABEL[state.db]), ' dataset — reading ', h('b', {}, tablesLabel()), '. The controls say it in plain English.']),
+      currentExercise() ? h('details', { id: 'exercise-hint' }, h('summary', {}, 'Show hint'), h('p', {}, currentExercise().hint)) : null,
       h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Column order and column names do not matter; row order ' + (ordered ? 'does (the task has a sort)' : 'does not') + '. SQLite syntax. Only one statement, only SELECT.'),
       h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Expected result'), h('div', { class: 'tablewrap', style: 'max-height:none', tabindex: expected ? '0' : null, role: expected ? 'region' : null, 'aria-label': expected ? 'Expected result' : null }, preview),
         expected && expected.rows.length > 6 ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', style: 'margin-top:var(--space-1)', onclick: () => { practice.showAll = !practice.showAll; renderMirror(); } }, practice.showAll ? 'Show fewer' : 'Show all ' + expected.rows.length + ' rows') : null),
@@ -284,6 +314,7 @@ function renderPractice(m) {
         h('button', { type: 'button', class: 'btn btn-primary', onclick: runPractice }, 'Run & check'),
         h('button', { type: 'button', class: 'btn btn-ghost', 'aria-pressed': String(practice.revealed), onclick: () => { practice.revealed = !practice.revealed; renderMirror(); } }, practice.revealed ? 'Hide the mirror' : 'Reveal the mirror'),
         h('button', { type: 'button', class: 'btn btn-ghost', onclick: () => setMode('explore') }, 'Back to explore'),
+        exercise ? h('button', { type: 'button', id: 'next-exercise', class: 'btn btn-ghost', disabled: Q.EXERCISES[state.db].at(-1).id === exercise, onclick: () => { const tasks = Q.EXERCISES[state.db]; openExercise(tasks[tasks.findIndex(t => t.id === exercise) + 1]?.id); } }, 'Next exercise') : null,
         h('span', { class: 'keys' }, h('kbd', {}, '⌘/Ctrl'), ' + ', h('kbd', {}, 'Enter'), ' runs')),
       practice.error ? h('div', { class: 'verdict bad', role: 'alert', id: 'practice-error' }, h('span', {}, '✗'), h('span', {}, h('b', {}, 'SQL error'), ' — ', practice.error,
         practice.errorFromSQLite ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'Check the table and column names against the dataset on the left, then run again.') : null)) : null,
@@ -314,11 +345,12 @@ function runPractice() {
     practice.showAll = !practice.verdict.ok;
   } catch (e) { practice.error = e.message; practice.errorFromSQLite = true; }
   finally { scratch.close(); }
+  saveDraft(!!practice.verdict?.ok); renderExercises();
   renderMirror();
   const st = $('#mirror .verdict'); if (st) st.scrollIntoView({ block: 'nearest' });
 }
 function shareTask() {
-  const url = location.origin + location.pathname + Q.encodeState(state, 'practice');
+  const url = new URL(Q.encodeState(state, 'practice', exercise), location.href).href;
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('Task link copied — it opens straight in practice mode'), () => toast('Copy failed: ' + url, { alert: true, ms: 6000 }));
   else toast(url, { ms: 6000 });
 }
