@@ -33,6 +33,8 @@
 <div class="subbar" id="subbar" role="region" aria-label="Dataset and mode"></div>
 <main class="main" id="main" tabindex="-1">
   <h1 class="sr-only">Query Mirror</h1>
+  <p class="grading-note" id="grading-note">Graded on results: a correct answer written differently passes, and you see which rows are missing or extra.</p>
+  <section class="exercise-set" id="exercises" aria-label="Exercise set"></section>
   <noscript><div class="error"><h3>JavaScript is off</h3><p>Query Mirror runs SQLite in your browser and needs JavaScript. Nothing is sent anywhere.</p></div></noscript>
   <div class="bench">
     <aside class="side">
@@ -50,7 +52,7 @@
     <div><dt>About this tool</dt>
     <dd>Four small synthetic datasets (hospital, e-commerce, movies, university) live inside <code>engine.js</code>; SQLite runs in your browser through sql.js 1.10.2 (vendored in <code>vendor/</code>). Every checkbox, filter, grouping and sort you set is turned into one <code>SELECT</code>, shown in the mirror and executed. Practice mode hides the mirror and grades the SQL you write against the same result. No build, no server, no account, nothing uploaded.</dd></div>
     <div><dt>Not verified here</dt>
-    <dd>The engine is SQLite. The mirror uses an Oracle-style layout and shows <code>LIMIT</code> as a <code>ROWNUM</code> comment, but the text itself is not run against Oracle: <code>CAST(… AS TEXT)</code> and <code>LIMIT</code> are SQLite constructs. The generator covers a teaching subset (inner and left joins along fixed keys, <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>DISTINCT</code>, five aggregates); subqueries, self-joins and window functions are out of scope. Practice grading compares result sets, not SQL text.</dd></div>
+    <dd>The engine and displayed SQL use SQLite syntax, including <code>CAST(… AS TEXT)</code> and <code>LIMIT</code>; queries are not verified against Oracle. The generator covers a teaching subset (inner and left joins along fixed keys, <code>WHERE</code> with <code>AND</code>/<code>OR</code> and <code>LIKE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>DISTINCT</code>, five aggregates); subqueries, self-joins and window functions are out of scope. Practice grading compares result sets, not SQL text. Exercise drafts and completion are saved only in this browser when storage is available; clearing site data removes them.</dd></div>
     <div><dt>Source</dt>
     <dd><a href="https://github.com/NickkkLian/SQL-Viz-for-Edu" rel="noopener">github.com/NickkkLian/SQL-Viz-for-Edu</a> · MIT · built by Nick Lian</dd></div>
   </dl>

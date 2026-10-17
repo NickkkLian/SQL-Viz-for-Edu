@@ -78,6 +78,14 @@ kbd{display:inline-block;min-width:18px;padding:0 var(--space-1);border:1px soli
 /* ===== workbench ===== */
 .main{min-width:0;padding:var(--space-4) var(--gutter) var(--space-10);max-width:var(--content-max);margin:0 auto}
 .bench{display:grid;grid-template-columns:300px minmax(0,1fr);gap:var(--space-4);align-items:start}
+.grading-note{font-size:var(--text-sm);color:var(--text-2);margin-bottom:var(--space-3);max-width:var(--measure)}
+.exercise-set{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2) var(--space-3);margin-bottom:var(--space-4);font-size:var(--text-xs)}
+.exercise-set label{font-weight:var(--weight-semibold)}
+.exercise-set select.ctl-sel{width:300px;max-width:100%}
+.exercise-set span{color:var(--text-2)}
+#exercise-hint{padding:var(--space-2) var(--space-3);border:1px solid var(--border);border-radius:var(--radius-sm)}
+#exercise-hint summary{cursor:pointer;color:var(--accent-text)}
+#exercise-hint p{padding-top:var(--space-2)}
 .side{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);position:sticky;top:calc(var(--topbar-h) + var(--space-3))}
 .stage{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);min-width:0}
 .card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-5);min-width:0;box-shadow:var(--shadow-1)}
@@ -206,6 +214,7 @@ dialog p{font-size:var(--text-sm);color:var(--text-2);margin-bottom:var(--space-
 /* ===== breakpoints ===== */
 @media (max-width:1023px){
   .bench{grid-template-columns:minmax(0,1fr)}
+  .stage{order:-1}
   .side{position:static;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
 }
 @media (max-width:639px){

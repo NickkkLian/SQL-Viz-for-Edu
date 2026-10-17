@@ -1,6 +1,8 @@
 # Query Mirror
 
-**Every click becomes the SQL behind it — practice is graded on results, not wording.**
+**Every click becomes the SQL behind it — practice is graded on results, not wording.** A correct answer written differently passes, and you see which rows are missing or extra.
+
+Open `index.html` offline to see a live query and its result immediately. Each dataset also has **eight exercises with hints**, from selecting columns through `AND`/`OR`, `LIKE`, joins and `GROUP BY`/`HAVING`. Drafts and completion are saved in this browser when storage is available; clearing site data removes them. Choose an exercise above the mirror to begin or resume.
 
 **Try it:** [open it with the query in the screenshot already built](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0) — two tables ticked, a two-join `SELECT`, 13 result rows — or [start from a blank page](https://nickkklian.github.io/SQL-Viz-for-Edu/). No build, no server, no account, nothing uploaded.
 
@@ -16,6 +18,7 @@ Students pick tables and set conditions in plain English; the mirror shows the s
 |---|---|
 | **Explore** | Tick tables (linked tables are joined for you), add conditions, group, summarise, sort, limit. The generated SQL updates on every click and runs immediately. |
 | **Practice** | The mirror is hidden. You get the expected result and write the query yourself. `Run & check` grades it and, when wrong, highlights which rows are missing and which are extra. |
+| **Exercises** | Eight fixed tasks per dataset, each with a prompt and hint. Draft answers and completion stay in the browser; completing a task does not require the same SQL wording. Exercise targets stay fixed until you return to Explore. |
 | **Share** | The whole state lives in the URL. `Copy task link` gives a link that opens straight into practice mode on the same task. |
 
 ![Practice mode: the expected result, your SQL, and a graded verdict](docs/screenshot-practice.png)
@@ -57,9 +60,13 @@ flowchart LR
 
 ```bash
 node check.mjs
+node tests/upgrade.mjs
+node tests/upgrade-browser.mjs
 ```
 
 It covers the vendored sql.js hashes, the engine loading as a browser global, **31 fixtures** (a click state, its pinned SQL, and the row and column counts it returns when executed in SQLite), the URL codec round-trip, the practice grader (column and row order, renamed columns, NULLs, float tolerance, one-statement rule, naming the wrong column) and page hygiene.
+
+The upgrade checks execute all 32 exercise targets against independent handwritten reference queries in the vendored SQLite, then check executable displayed `LIMIT`, quoted text, `AND`/`OR` precedence, `LIKE` wildcards, task links and progress storage. The browser checks use installed Chrome with HTTP(S) page requests blocked; they cover hints, draft restoration, grading, completion, next task and unavailable storage. No package install or server is required.
 
 ```bash
 node check.mjs --break
@@ -95,10 +102,12 @@ Both were byte-compared against the npm tarball for sql.js version 1.10.2. `vend
 
 ## Limits — what this is not
 
-- **The mirror is Oracle-styled, not Oracle-verified.** The layout and the `ROWNUM` comment match what students see in class, but the text is executed by SQLite and is not run against an Oracle instance. `CAST(… AS TEXT)` and `LIMIT` are SQLite spellings.
+- **The mirror uses SQLite syntax, not Oracle-verified SQL.** The displayed query runs in SQLite, including a real `LIMIT` clause. `CAST(… AS TEXT)` and `LIMIT` are SQLite spellings; nothing is run against an Oracle instance.
 - **A teaching subset.** Inner and left joins along fixed schema keys, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `DISTINCT`, and five aggregates. No subqueries, self-joins, window functions, unions or writes.
 - **Grading compares results, not SQL.** A query that returns the right rows by luck passes; an elegant query returning different rows fails. Column names and order are ignored; row order is checked only when the task has a sort.
 - **Joins are chosen for you.** Tables are connected along the schema's declared edges by shortest path, so the explorer cannot produce an accidental cross join — and cannot demonstrate one either.
+- **Conditions use SQL precedence.** Each condition after the first chooses `AND` or `OR`; `AND` is evaluated first. Parenthesized condition groups are outside the click builder. Text `LIKE` accepts `%` (any text) and `_` (one character), using SQLite's default case rules.
+- **Progress belongs to this browser.** Saved drafts and completion are local, without an account or sync. Storage can be unavailable in private/restricted contexts; practice still works and shows “saving unavailable.” Custom tasks have no saved progress. A result match counts as completion even after revealing the mirror; this is a learning aid, not an exam record.
 - **Datasets are tiny** (5–50 rows per table). Good for reading a result by eye, useless for anything about performance.
 
 ## Run it locally
@@ -117,6 +126,7 @@ Then open `index.html` in any browser. There is no install step and no dev serve
 | `?db=movies&tables=film,director` | Films joined to directors through the bridge table |
 | `?db=university&tables=student` | Students, ready to group |
 | `…&mode=practice` | The same state as a practice task |
+| `?db=hospital&exercise=names` | The first Hospital exercise, in practice mode with its fixed target |
 
 Older links using only `db` and `tables` still work. Unknown tables or columns in a link are dropped rather than trusted.
 
