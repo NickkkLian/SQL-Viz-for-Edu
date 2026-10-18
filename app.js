@@ -2,6 +2,8 @@
 (function () {
 'use strict';
 const Q = window.QueryMirror;
+const ER = window.SchemaMirror;
+const schemas = Object.fromEntries(Object.entries(Q.DDL).map(([name, ddl]) => [name, ER.parseSchema(ddl)]));
 const $ = s => document.querySelector(s);
 const SVG_TAGS = new Set(['svg', 'rect', 'line', 'text', 'defs', 'pattern', 'path', 'g', 'title', 'circle', 'polyline']);
 const h = (tag, attrs = {}, ...kids) => {
@@ -34,6 +36,7 @@ let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   
 // the loading state appears only when loading takes 300ms or more (a shorter wait shows nothing, so nothing flashes)
 let slow = false;
 const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
+let tracedSQL = '', tracedLabel = '', tracedDB = '';
 let progressStorage = null, progressAvailable = false;
 try { progressStorage = window.localStorage; progressStorage.setItem('query-mirror.probe', '1'); progressStorage.removeItem('query-mirror.probe'); progressAvailable = true; } catch (e) {}
 if (exercise) practice.answer = Q.loadProgress(progressStorage, state.db, exercise).answer;
@@ -88,7 +91,7 @@ function openExercise(id) {
   practice.answer = Q.loadProgress(progressStorage, state.db, id).answer;
   update();
 }
-function resetPractice() { practice.answer = ''; practice.verdict = null; practice.result = null; practice.error = null; practice.revealed = false; practice.showAll = false; }
+function resetPractice() { practice.answer = ''; practice.verdict = null; practice.result = null; practice.error = null; practice.revealed = false; practice.showAll = false; tracedSQL = ''; tracedLabel = ''; }
 function toggleTable(t) {
   const i = state.tables.indexOf(t);
   if (i >= 0) state.tables.splice(i, 1); else state.tables.push(t);
@@ -170,7 +173,7 @@ function updatePanels(opts) {
   // Value boxes call update({controls:false}): rebuilding the panel on every keystroke would replace the
   // focused <input> and drop the caret after the first character.
   if (opts.controls !== false) renderControls();
-  renderMirror(); renderResults();
+  renderMirror(); renderResults(); renderSchema();
 }
 function renderExercises() {
   const tasks = Q.EXERCISES[state.db];
@@ -185,13 +188,79 @@ function renderExercises() {
 function runMirror() {
   const prevSQL = lastSQL;
   lastSQL = ''; lastResult = null; lastError = null; lastBuildError = null;
+  if (mode === 'explore') { tracedSQL = ''; tracedLabel = ''; tracedDB = state.db; }
   if (!state.tables.length) return;
   const { sql, error } = Q.buildSQL(state);
   if (!sql) { lastBuildError = error; return; }
   lastSQL = sql;
   if (prevSQL && prevSQL !== sql && (practice.verdict || practice.error)) { practice.verdict = null; practice.result = null; practice.error = null; }
   if (!ready) return;
-  try { lastResult = exec(state.db, sql); } catch (e) { lastError = e.message; }
+  try {
+    lastResult = exec(state.db, sql);
+    if (mode === 'explore') { tracedSQL = sql; tracedLabel = 'Explore query'; tracedDB = state.db; }
+  } catch (e) { lastError = e.message; }
+}
+
+function renderSchema() {
+  const schema = schemas[state.db];
+  // In practice the hidden target is never traced; edits do not replace the last run.
+  const trace = ER.queryPath(tracedDB === state.db ? tracedSQL : '', schema);
+  const active = new Set(trace.instances.map(t => t.table));
+  fill($('#schema-status'), trace.message || tracedLabel + ' · ' + trace.instances.length + ' table instances · ' + trace.joins.length + ' joins');
+  const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + ' AS ' + t.alias : '?'; };
+  fill($('#query-path'),
+    trace.instances.length ? h('div', { class: 'erd-instances', 'aria-label': 'Query table instances' }, trace.instances.map((t, i) =>
+      h('span', { class: 'erd-instance' }, (i + 1) + ' · ' + t.table + ' AS ' + t.alias))) : null,
+    trace.joins.length ? h('ol', { class: 'erd-joins' }, trace.joins.map(j => h('li', { class: j.matches.length ? 'erd-declared' : 'erd-unlinked' },
+      h('strong', {}, j.kind.toUpperCase() + ' ' + instanceLabel(j.target)),
+      h('code', {}, j.predicate || 'No ON condition (all combinations)'),
+      h('span', {}, j.note),
+      j.pairs.map(p => h('small', {}, p.a.instance.alias + '.' + p.a.column + ' ' + p.operator.toUpperCase() + ' ' + p.b.instance.alias + '.' + p.b.column))))) : null);
+  if (trace.instances.length) {
+    const pathGraph = h('svg', { width: trace.instances.length * 220, height: 100 + trace.joins.length * 26, class: 'erd-svg', 'aria-hidden': 'true', focusable: 'false' });
+    trace.joins.forEach((j, index) => {
+      const targetIndex = trace.instances.findIndex(t => t.id === j.target);
+      const sources = [...new Set(j.pairs.map(p => p.a.instance.id === j.target ? p.b.instance.id : p.a.instance.id))];
+      if (!sources.length && !j.predicate && !j.kind.includes('natural')) sources.push(trace.instances[targetIndex - 1].id);
+      sources.forEach(id => {
+        const from = trace.instances.findIndex(t => t.id === id), y = 95 + index * 26;
+        pathGraph.append(h('path', { d: `M ${from * 220 + 108} 68 V ${y} H ${targetIndex * 220 + 108} V 68`, class: j.matches.length ? 'erd-edge erd-active-edge' : 'erd-edge erd-query-edge' }),
+          h('text', { x: (from + targetIndex) * 110 + 108, y: y - 5, 'text-anchor': 'middle' }, 'Join ' + (index + 1) + (j.matches.length ? ' · FK' : ' · no confirmed FK')));
+      });
+    });
+    trace.instances.forEach((t, i) => pathGraph.append(h('g', { class: 'erd-table erd-active-table' },
+      h('rect', { x: i * 220 + 8, y: 8, width: 200, height: 60, rx: 8 }),
+      h('text', { x: i * 220 + 20, y: 32, class: 'erd-title' }, t.table),
+      h('text', { x: i * 220 + 20, y: 54 }, 'AS ' + t.alias))));
+    $('#query-path').prepend(h('div', { class: 'erd-scroll', tabindex: '0', role: 'region', 'aria-label': 'Query join diagram, aliases are separate nodes; scroll to explore' }, pathGraph));
+  }
+  const positions = new Map(schema.tables.map((t, i) => [t.name, { x: 32 + (i % 3) * 310, y: 32 + Math.floor(i / 3) * 340 }]));
+  const width = Math.min(3, schema.tables.length) * 310 + 24;
+  const height = Math.ceil(schema.tables.length / 3) * 340;
+  const graph = h('svg', { width, height, viewBox: '0 0 ' + width + ' ' + height, 'aria-hidden': 'true', focusable: 'false', class: 'erd-svg' });
+  for (const fk of schema.foreignKeys) {
+    const a = positions.get(fk.from), b = positions.get(fk.to);
+    const y1 = a.y + 58 + schema.tables.find(t => t.name === fk.from).columns.findIndex(c => c.name === fk.columns[0]) * 25;
+    const y2 = b.y + 58 + schema.tables.find(t => t.name === fk.to).columns.findIndex(c => c.name === fk.references[0]) * 25;
+    const d = fk.from === fk.to
+      ? `M ${a.x + 260} ${y1} h 20 V ${y2} h -20`
+      : `M ${a.x + 260} ${y1} H ${a.x + 278} V ${a.y + 300} H ${b.x - 12} V ${y2} H ${b.x}`;
+    graph.append(h('path', { d, class: trace.activeKeys.includes(fk.id) ? 'erd-edge erd-active-edge' : 'erd-edge', 'data-key': fk.id }));
+  }
+  for (const t of schema.tables) {
+    const { x, y } = positions.get(t.name), on = active.has(t.name);
+    graph.append(h('g', { class: on ? 'erd-table erd-active-table' : 'erd-table', 'data-table': t.name },
+      h('rect', { x, y, width: 260, height: 45 + t.columns.length * 25, rx: 8 }),
+      h('text', { x: x + 12, y: y + 26, class: 'erd-title' }, (on ? '● ' : '') + t.name),
+      t.columns.map((c, i) => h('text', { x: x + 12, y: y + 62 + i * 25 },
+        (t.primaryKey.includes(c.name) ? 'PK ' : '') + (schema.foreignKeys.some(f => f.from === t.name && f.columns.includes(c.name)) ? 'FK ' : '') + c.name + ' · ' + c.type))));
+  }
+  fill($('#schema-graph'), graph);
+  fill($('#schema-description'), schema.tables.map(t => h('div', {}, h('h3', {}, t.name + (active.has(t.name) ? ' · in query' : '')),
+    h('ul', {}, t.columns.map(c => h('li', {}, c.name + ' · ' + c.type + (t.primaryKey.includes(c.name) ? ' · primary key' : '')))))),
+    h('h3', {}, 'Declared foreign keys'),
+    schema.foreignKeys.length ? h('ul', {}, schema.foreignKeys.map(f => h('li', {},
+      f.from + '(' + f.columns.join(', ') + ') → ' + f.to + '(' + f.references.join(', ') + ')' + (trace.activeKeys.includes(f.id) ? ' · used by query' : '')))) : h('p', {}, 'No foreign keys declared.'));
 }
 function renderSubbar() {
   const sb = $('#subbar'); fill(sb, 
@@ -337,16 +406,18 @@ function runPractice() {
   if (!lastResult) { practice.error = 'the task has no result to compare with (' + (lastBuildError || lastError || 'nothing selected') + ') — go back to Explore and fix the task first'; renderMirror(); return; }
   if (!sql) { practice.error = 'write a SELECT first'; renderMirror(); return; }
   if (!Q.isSelectOnly(sql)) { practice.error = 'one statement, starting with SELECT (or WITH). Practice mode never runs anything else.'; renderMirror(); return; }
+  tracedSQL = ''; tracedLabel = ''; tracedDB = state.db;
   // Run on a throwaway copy so nothing a student types can touch the shared in-memory database.
   const scratch = new SQL.Database(dbs[state.db].export());
   try {
     practice.result = Q.runQuery(scratch, sql.replace(/;\s*$/, ''));
+    tracedSQL = sql; tracedLabel = 'Your last executed query';
     practice.verdict = Q.grade(lastResult, practice.result, { ordered: !!state.sort });
     practice.showAll = !practice.verdict.ok;
   } catch (e) { practice.error = e.message; practice.errorFromSQLite = true; }
   finally { scratch.close(); }
   saveDraft(!!practice.verdict?.ok); renderExercises();
-  renderMirror();
+  renderMirror(); renderSchema();
   const st = $('#mirror .verdict'); if (st) st.scrollIntoView({ block: 'nearest' });
 }
 function shareTask() {

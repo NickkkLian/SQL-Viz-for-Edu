@@ -10,7 +10,7 @@
 const VERSION = '2.0.0';
 
 const DDL={
-ecommerce:`CREATE TABLE product(prod_id TEXT, prod_name TEXT, category TEXT, stock_qty INTEGER, unit_price REAL);
+ecommerce:`CREATE TABLE product(prod_id TEXT, prod_name TEXT, category TEXT, stock_qty INTEGER, unit_price REAL, PRIMARY KEY(prod_id));
 INSERT INTO product VALUES('P001','Wireless Headphones','Electronics',85,79.99);
 INSERT INTO product VALUES('P002','Yoga Mat','Sports',120,29.99);
 INSERT INTO product VALUES('P003','Coffee Maker','Kitchen',45,49.99);
@@ -23,7 +23,7 @@ INSERT INTO product VALUES('P009','Smart Watch','Electronics',40,199.99);
 INSERT INTO product VALUES('P010','Air Purifier','Home',25,129.99);
 INSERT INTO product VALUES('P011','Cookbook','Books',180,19.99);
 
-CREATE TABLE customer(cust_id INTEGER, last_name TEXT, first_name TEXT, email TEXT, city TEXT, country TEXT, referred_by INTEGER);
+CREATE TABLE customer(cust_id INTEGER, last_name TEXT, first_name TEXT, email TEXT, city TEXT, country TEXT, referred_by INTEGER, PRIMARY KEY(cust_id), FOREIGN KEY(referred_by) REFERENCES customer(cust_id));
 INSERT INTO customer VALUES(1,'Chen','Lily','lily.c@example.com','Toronto','Canada',NULL);
 INSERT INTO customer VALUES(2,'Smith','James','j.smith@example.com','New York','US',1);
 INSERT INTO customer VALUES(3,'Patel','Priya','p.patel@example.com','London','UK',1);
@@ -35,7 +35,7 @@ INSERT INTO customer VALUES(8,'Tanaka','Yuki','y.tanaka@example.com','Tokyo','Ja
 INSERT INTO customer VALUES(9,'Okonkwo','Emeka','e.okonkwo@example.com','Lagos','Nigeria',7);
 INSERT INTO customer VALUES(10,'Rossi','Marco','m.rossi@example.com','Rome','Italy',NULL);
 
-CREATE TABLE order_hdr(order_id INTEGER, order_date TEXT, cust_id INTEGER, status TEXT);
+CREATE TABLE order_hdr(order_id INTEGER, order_date TEXT, cust_id INTEGER, status TEXT, PRIMARY KEY(order_id), FOREIGN KEY(cust_id) REFERENCES customer(cust_id));
 INSERT INTO order_hdr VALUES(1001,'2024-01-15',1,'Delivered');
 INSERT INTO order_hdr VALUES(1002,'2024-02-03',3,'Delivered');
 INSERT INTO order_hdr VALUES(1003,'2024-02-18',1,'Shipped');
@@ -44,7 +44,7 @@ INSERT INTO order_hdr VALUES(1005,'2024-03-22',7,'Processing');
 INSERT INTO order_hdr VALUES(1006,'2024-04-01',2,'Delivered');
 INSERT INTO order_hdr VALUES(1007,'2024-04-14',10,'Shipped');
 
-CREATE TABLE order_item(order_id INTEGER, prod_id TEXT, quantity INTEGER, price_charged REAL);
+CREATE TABLE order_item(order_id INTEGER, prod_id TEXT, quantity INTEGER, price_charged REAL, PRIMARY KEY(order_id, prod_id), FOREIGN KEY(order_id) REFERENCES order_hdr(order_id), FOREIGN KEY(prod_id) REFERENCES product(prod_id));
 INSERT INTO order_item VALUES(1001,'P001',1,79.99);
 INSERT INTO order_item VALUES(1001,'P005',2,24.99);
 INSERT INTO order_item VALUES(1002,'P009',1,199.99);
@@ -56,7 +56,7 @@ INSERT INTO order_item VALUES(1005,'P006',1,64.99);
 INSERT INTO order_item VALUES(1005,'P011',2,19.99);
 INSERT INTO order_item VALUES(1006,'P010',1,129.99);
 INSERT INTO order_item VALUES(1007,'P003',1,49.99);`,
-hospital:`CREATE TABLE patient(patient_id INTEGER, last_name TEXT, first_name TEXT, dob TEXT, gender TEXT, city TEXT, country TEXT);
+hospital:`CREATE TABLE patient(patient_id INTEGER, last_name TEXT, first_name TEXT, dob TEXT, gender TEXT, city TEXT, country TEXT, PRIMARY KEY(patient_id));
 INSERT INTO patient VALUES(101,'Anderson','Emily','1990-03-12','F','Chicago','US');
 INSERT INTO patient VALUES(102,'Brown','Liam','1985-07-24','M','Houston','US');
 INSERT INTO patient VALUES(103,'Clark','Sophia','1978-11-05','F','Phoenix','US');
@@ -78,14 +78,14 @@ INSERT INTO patient VALUES(118,'Reed','Lucas','2005-09-30','M','New York','US');
 INSERT INTO patient VALUES(119,'Scott','Ella','1996-04-08','F','Toronto','Canada');
 INSERT INTO patient VALUES(120,'Taylor','Henry','1962-08-17','M','Chicago','US');
 
-CREATE TABLE doctor(doctor_id INTEGER, last_name TEXT, first_name TEXT, specialty TEXT, target_patients INTEGER);
+CREATE TABLE doctor(doctor_id INTEGER, last_name TEXT, first_name TEXT, specialty TEXT, target_patients INTEGER, PRIMARY KEY(doctor_id));
 INSERT INTO doctor VALUES(201,'Adams','Sarah','Cardiology',40);
 INSERT INTO doctor VALUES(202,'Baker','Michael','Neurology',35);
 INSERT INTO doctor VALUES(203,'Carter','Anna','Pediatrics',50);
 INSERT INTO doctor VALUES(204,'Dixon','Robert','Orthopedics',30);
 INSERT INTO doctor VALUES(205,'Ellis','Karen','General Practice',60);
 
-CREATE TABLE appointment(appt_id INTEGER, patient_id INTEGER, doctor_id INTEGER, appt_date TEXT, diagnosis TEXT, fee REAL);
+CREATE TABLE appointment(appt_id INTEGER, patient_id INTEGER, doctor_id INTEGER, appt_date TEXT, diagnosis TEXT, fee REAL, PRIMARY KEY(appt_id), FOREIGN KEY(patient_id) REFERENCES patient(patient_id), FOREIGN KEY(doctor_id) REFERENCES doctor(doctor_id));
 INSERT INTO appointment VALUES(3001,101,201,'2024-01-10','Hypertension',150.00);
 INSERT INTO appointment VALUES(3002,102,202,'2024-01-15','Migraine',200.00);
 INSERT INTO appointment VALUES(3003,103,201,'2024-01-22','Arrhythmia',175.00);
@@ -124,7 +124,7 @@ INSERT INTO appointment VALUES(3035,115,203,'2024-09-23','Allergy Test',90.00);
 INSERT INTO appointment VALUES(3036,116,201,'2024-09-30','Blood Pressure',145.00);
 INSERT INTO appointment VALUES(3037,117,204,'2024-10-07','Knee Scan',225.00);
 INSERT INTO appointment VALUES(3038,118,205,'2024-10-14','Checkup',60.00);`,
-movies:`CREATE TABLE film(film_id TEXT, title TEXT, release_year INTEGER, rating REAL, genre TEXT, box_office_m REAL, runtime_min INTEGER);
+movies:`CREATE TABLE film(film_id TEXT, title TEXT, release_year INTEGER, rating REAL, genre TEXT, box_office_m REAL, runtime_min INTEGER, PRIMARY KEY(film_id));
 INSERT INTO film VALUES('F001','Echoes of Tomorrow',2021,8.2,'Sci-Fi',320.5,142);
 INSERT INTO film VALUES('F002','The Last Harbor',2019,7.5,'Drama',85.3,118);
 INSERT INTO film VALUES('F003','Neon Requiem',2022,8.7,'Thriller',412.0,131);
@@ -151,7 +151,7 @@ INSERT INTO film VALUES('F023','Amber Signal',2021,7.2,'Thriller',175.3,122);
 INSERT INTO film VALUES('F024','Deep Current',2022,8.0,'Sci-Fi',350.9,148);
 INSERT INTO film VALUES('F025','Lantern Walk',2019,7.8,'Romance',65.4,104);
 
-CREATE TABLE director(director_id INTEGER, full_name TEXT, nationality TEXT, birth_year INTEGER, awards_won INTEGER);
+CREATE TABLE director(director_id INTEGER, full_name TEXT, nationality TEXT, birth_year INTEGER, awards_won INTEGER, PRIMARY KEY(director_id));
 INSERT INTO director VALUES(301,'Aisha Nwosu','Nigerian',1978,6);
 INSERT INTO director VALUES(302,'Carlos Vega','Mexican',1972,4);
 INSERT INTO director VALUES(303,'Elena Sorokina','Russian',1980,8);
@@ -178,7 +178,7 @@ INSERT INTO director VALUES(323,'Paula Rivera','Argentinian',1982,2);
 INSERT INTO director VALUES(324,'Quentin Moore','American',1966,12);
 INSERT INTO director VALUES(325,'Rina Suzuki','Japanese',1991,1);
 
-CREATE TABLE cast_link(film_id TEXT, director_id INTEGER, contribution TEXT);
+CREATE TABLE cast_link(film_id TEXT, director_id INTEGER, contribution TEXT, PRIMARY KEY(film_id, director_id), FOREIGN KEY(film_id) REFERENCES film(film_id), FOREIGN KEY(director_id) REFERENCES director(director_id));
 INSERT INTO cast_link VALUES('F001',301,'Director');INSERT INTO cast_link VALUES('F001',305,'Producer');
 INSERT INTO cast_link VALUES('F002',304,'Director');INSERT INTO cast_link VALUES('F003',303,'Director');
 INSERT INTO cast_link VALUES('F003',312,'Executive Producer');INSERT INTO cast_link VALUES('F004',302,'Director');
@@ -195,7 +195,7 @@ INSERT INTO cast_link VALUES('F021',310,'Director');INSERT INTO cast_link VALUES
 INSERT INTO cast_link VALUES('F023',316,'Director');INSERT INTO cast_link VALUES('F024',313,'Director');
 INSERT INTO cast_link VALUES('F025',325,'Director');
 
-CREATE TABLE genre_tag(tag_id TEXT, tag_name TEXT);
+CREATE TABLE genre_tag(tag_id TEXT, tag_name TEXT, PRIMARY KEY(tag_id));
 INSERT INTO genre_tag VALUES('T1','suspenseful');INSERT INTO genre_tag VALUES('T2','emotional');
 INSERT INTO genre_tag VALUES('T3','visually stunning');INSERT INTO genre_tag VALUES('T4','thought-provoking');
 INSERT INTO genre_tag VALUES('T5','family-friendly');INSERT INTO genre_tag VALUES('T6','dark');
@@ -206,7 +206,7 @@ INSERT INTO genre_tag VALUES('T13','light-hearted');INSERT INTO genre_tag VALUES
 INSERT INTO genre_tag VALUES('T15','edge-of-seat');INSERT INTO genre_tag VALUES('T16','tearjerker');
 INSERT INTO genre_tag VALUES('T17','mind-bending');INSERT INTO genre_tag VALUES('T18','action-packed');
 
-CREATE TABLE viewer(viewer_id INTEGER, username TEXT, full_name TEXT, country TEXT, membership TEXT, joined_year INTEGER, referred_by INTEGER);
+CREATE TABLE viewer(viewer_id INTEGER, username TEXT, full_name TEXT, country TEXT, membership TEXT, joined_year INTEGER, referred_by INTEGER, PRIMARY KEY(viewer_id), FOREIGN KEY(referred_by) REFERENCES viewer(viewer_id));
 INSERT INTO viewer VALUES(401,'cine_max','Alex Jordan','US','Premium',2021,NULL);
 INSERT INTO viewer VALUES(402,'film_buff','Sam Lee','Canada','Standard',2022,401);
 INSERT INTO viewer VALUES(403,'reeltime','Maya Patel','UK','Premium',2020,NULL);
@@ -233,7 +233,7 @@ INSERT INTO viewer VALUES(423,'director_cut','Zara Mensah','South Africa','Stand
 INSERT INTO viewer VALUES(424,'final_cut','Pedro Alves','Portugal','Standard',2023,420);
 INSERT INTO viewer VALUES(425,'scene_one','Aiko Nakamura','Japan','Premium',2021,NULL);
 
-CREATE TABLE watch_history(watch_id TEXT, viewer_id INTEGER, tag_id TEXT, film_id TEXT);
+CREATE TABLE watch_history(watch_id TEXT, viewer_id INTEGER, tag_id TEXT, film_id TEXT, PRIMARY KEY(watch_id), FOREIGN KEY(viewer_id) REFERENCES viewer(viewer_id), FOREIGN KEY(tag_id) REFERENCES genre_tag(tag_id), FOREIGN KEY(film_id) REFERENCES film(film_id));
 INSERT INTO watch_history VALUES('W001',401,'T1','F003');INSERT INTO watch_history VALUES('W002',402,'T2','F006');
 INSERT INTO watch_history VALUES('W003',403,'T3','F015');INSERT INTO watch_history VALUES('W004',404,'T4','F001');
 INSERT INTO watch_history VALUES('W005',405,'T8','F005');INSERT INTO watch_history VALUES('W006',406,'T14','F013');
@@ -259,7 +259,7 @@ INSERT INTO watch_history VALUES('W043',422,'T1','F018');INSERT INTO watch_histo
 INSERT INTO watch_history VALUES('W045',424,'T12','F015');INSERT INTO watch_history VALUES('W046',425,'T9','F013');
 INSERT INTO watch_history VALUES('W047',401,'T8','F005');INSERT INTO watch_history VALUES('W048',403,'T6','F021');
 INSERT INTO watch_history VALUES('W049',412,'T10','F003');INSERT INTO watch_history VALUES('W050',420,'T4','F024');`,
-university:`CREATE TABLE student(student_id INTEGER, last_name TEXT, first_name TEXT, major TEXT, enrollment_year INTEGER, gpa REAL, advisor_id INTEGER);
+university:`CREATE TABLE student(student_id INTEGER, last_name TEXT, first_name TEXT, major TEXT, enrollment_year INTEGER, gpa REAL, advisor_id INTEGER, PRIMARY KEY(student_id));
 INSERT INTO student VALUES(1001,'Adams','Emma','Computer Science',2021,3.8,NULL);
 INSERT INTO student VALUES(1002,'Brown','Noah','Business',2020,3.2,NULL);
 INSERT INTO student VALUES(1003,'Clark','Olivia','Computer Science',2022,3.9,1001);
@@ -286,7 +286,7 @@ INSERT INTO student VALUES(1023,'Walsh','Sebastian','Computer Science',2023,3.6,
 INSERT INTO student VALUES(1024,'Young','Penelope','Biology',2020,3.9,1005);
 INSERT INTO student VALUES(1025,'Zhang','Mateo','Engineering',2021,3.5,1007);
 
-CREATE TABLE course(course_id TEXT, course_name TEXT, department TEXT, credits INTEGER, max_capacity INTEGER);
+CREATE TABLE course(course_id TEXT, course_name TEXT, department TEXT, credits INTEGER, max_capacity INTEGER, PRIMARY KEY(course_id));
 INSERT INTO course VALUES('CS101','Intro to Programming','Computer Science',3,40);
 INSERT INTO course VALUES('CS201','Data Structures','Computer Science',3,35);
 INSERT INTO course VALUES('CS301','Database Systems','Computer Science',3,30);
@@ -303,7 +303,7 @@ INSERT INTO course VALUES('ENG301','Thermodynamics','Engineering',3,25);
 INSERT INTO course VALUES('PSY101','Intro to Psychology','Psychology',3,60);
 INSERT INTO course VALUES('PSY201','Cognitive Psychology','Psychology',3,40);
 
-CREATE TABLE enrollment(enroll_id INTEGER, student_id INTEGER, course_id TEXT, semester TEXT, grade TEXT, score REAL);
+CREATE TABLE enrollment(enroll_id INTEGER, student_id INTEGER, course_id TEXT, semester TEXT, grade TEXT, score REAL, PRIMARY KEY(enroll_id), FOREIGN KEY(student_id) REFERENCES student(student_id), FOREIGN KEY(course_id) REFERENCES course(course_id));
 INSERT INTO enrollment VALUES(1,1001,'CS101','Fall 2021','A',95.0);
 INSERT INTO enrollment VALUES(2,1001,'CS201','Spring 2022','A',92.0);
 INSERT INTO enrollment VALUES(3,1002,'BUS101','Fall 2020','B',82.0);

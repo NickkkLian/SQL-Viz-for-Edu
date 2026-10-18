@@ -20,6 +20,19 @@ Students pick tables and set conditions in plain English; the mirror shows the s
 | **Practice** | The mirror is hidden. You get the expected result and write the query yourself. `Run & check` grades it and, when wrong, highlights which rows are missing and which are extra. |
 | **Exercises** | Eight fixed tasks per dataset, each with a prompt and hint. Draft answers and completion stay in the browser; completing a task does not require the same SQL wording. Exercise targets stay fixed until you return to Explore. |
 | **Share** | The whole state lives in the URL. `Copy task link` gives a link that opens straight into practice mode on the same task. |
+| **Schema & query path** | See every table, column, primary key and foreign key from the loaded `CREATE TABLE` statements. The last executed query highlights its tables and declared relationships; a separate diagram keeps each alias distinct, including self-joins. |
+
+## Follow the joins
+
+Open **Schema & query path** below the mirror. Explore follows the query that just executed, including automatically added bridge tables. In Practice it follows **your last executed answer**, after **Run & check** (or Ctrl/⌘ + Enter); the hidden exercise target is never traced. Editing a draft leaves the previous executed path visible. A SQLite error clears the trace.
+
+Solid highlighted lines correspond to declared foreign keys. A join on another column (for example `customer a JOIN customer b ON a.city=b.city`) gets a dashed query edge and the explicit note **“No declared foreign key for this join.”** Multiple aliases of the same table get separate query nodes, so `child.referred_by = parent.cust_id` is visible as a self-join. Join descriptions name the exact alias/column pairs. Composite foreign keys need all column pairs before a relationship lights up.
+
+The teaching datasets now declare their primary and foreign keys in the SQL itself, including customer and viewer referral self-relations; checks load every row with SQLite foreign-key enforcement enabled. The diagram does not infer keys from column names or borrow the builder’s relationship list. The schema reader handles inline and table constraints, composite keys, quoted identifiers, comments and references that omit the parent’s primary-key columns. No new library or remote service is used.
+
+Use Tab and Enter to collapse the panel or open its full text equivalent. Tab to either diagram and use arrow keys to scroll; wide diagrams stay inside their panels on phones. Keys and join status are conveyed in text as well as color.
+
+The query reader covers a single flat `SELECT` with aliases, multiple joins, self-joins, qualified equality predicates joined by `AND`, and unambiguous `USING`. Cross/comma/natural and non-key joins show no confirmed foreign key. `OR`/`NOT` predicates are explicitly marked unconfirmed. Subqueries, CTEs, compound queries, unknown tables and ambiguous aliases show **Path unavailable** instead of guessing; SQLite execution and grading still work independently. This is a static explanation of the executed SQL, not an animated SQLite execution plan or a row-by-row traversal.
 
 ![Practice mode: the expected result, your SQL, and a graded verdict](docs/screenshot-practice.png)
 
@@ -42,8 +55,10 @@ flowchart LR
   subgraph browser["One browser tab — no server"]
     UI["app.js<br/>controls, tables, practice UI"]
     ENG["engine.js<br/>datasets · click state → SELECT<br/>formatter · grader · URL codec"]
+    ER["schema.js<br/>CREATE TABLE → schema<br/>executed SELECT → alias join path"]
     WASM["vendor/sql-wasm.js + .wasm<br/>SQLite 3.45.0 via sql.js 1.10.2"]
     UI -->|"state"| ENG
+    UI -->|"DDL + last executed SQL"| ER
     ENG -->|"SELECT"| WASM
     WASM -->|"rows"| UI
     UI -->|"student SQL (read-only, on a scratch copy)"| WASM
@@ -54,19 +69,23 @@ flowchart LR
   CHECK["check.mjs<br/>31 fixtures + grader tests"] -->|"require()"| ENG
 ```
 
-`engine.js` holds every decision and touches no DOM, so the same code runs in the page and under `node`. That is what makes the generator testable.
+`engine.js` holds the builder and grader; `schema.js` reads schema declarations and query paths. Both touch no DOM and run unchanged in the page and under `node`.
 
 ## Checks
 
 ```bash
 node check.mjs
 node tests/upgrade.mjs
+node tests/schema.mjs
+node tests/schema.mjs --mutations
 node tests/upgrade-browser.mjs
 ```
 
 It covers the vendored sql.js hashes, the engine loading as a browser global, **31 fixtures** (a click state, its pinned SQL, and the row and column counts it returns when executed in SQLite), the URL codec round-trip, the practice grader (column and row order, renamed columns, NULLs, float tolerance, one-statement rule, naming the wrong column) and page hygiene.
 
 The upgrade checks execute all 32 exercise targets against independent handwritten reference queries in the vendored SQLite, then check executable displayed `LIMIT`, quoted text, `AND`/`OR` precedence, `LIKE` wildcards, task links and progress storage. The browser checks use installed Chrome with HTTP(S) page requests blocked; they cover hints, draft restoration, grading, completion, next task and unavailable storage. No package install or server is required.
+
+Schema checks cover parsing, multi-join paths, aliases, self-joins, composite keys, the no-foreign-key note, unsupported scopes and agreement with SQLite. `--mutations` breaks the schema reader, alias resolution, self-join handling, multi-join extraction and missing-FK note one at a time; each must fail its intended test. Browser checks also exercise the diagram, keyboard disclosure/scrolling, practice target privacy and last-run behavior. Set `QM_SCREENSHOTS=docs/erd-proof` to capture desktop (1440px) and phone (390px) multi-join, self-join and missing-FK states with HTTP(S) blocked.
 
 ```bash
 node check.mjs --break
@@ -103,7 +122,7 @@ Both were byte-compared against the npm tarball for sql.js version 1.10.2. `vend
 ## Limits — what this is not
 
 - **The mirror uses SQLite syntax, not Oracle-verified SQL.** The displayed query runs in SQLite, including a real `LIMIT` clause. `CAST(… AS TEXT)` and `LIMIT` are SQLite spellings; nothing is run against an Oracle instance.
-- **A teaching subset.** Inner and left joins along fixed schema keys, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `DISTINCT`, and five aggregates. No subqueries, self-joins, window functions, unions or writes.
+- **A teaching subset in the click builder.** Inner and left joins along fixed schema keys, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `DISTINCT`, and five aggregates. No subqueries, self-joins, window functions, unions or writes in the builder. Practice accepts SQLite read queries, and its diagram supports flat self-joins as described above.
 - **Grading compares results, not SQL.** A query that returns the right rows by luck passes; an elegant query returning different rows fails. Column names and order are ignored; row order is checked only when the task has a sort.
 - **Joins are chosen for you.** Tables are connected along the schema's declared edges by shortest path, so the explorer cannot produce an accidental cross join — and cannot demonstrate one either.
 - **Conditions use SQL precedence.** Each condition after the first chooses `AND` or `OR`; `AND` is evaluated first. Parenthesized condition groups are outside the click builder. Text `LIKE` accepts `%` (any text) and `_` (one character), using SQLite's default case rules.

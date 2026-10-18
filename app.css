@@ -88,6 +88,30 @@ kbd{display:inline-block;min-width:18px;padding:0 var(--space-1);border:1px soli
 #exercise-hint p{padding-top:var(--space-2)}
 .side{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);position:sticky;top:calc(var(--topbar-h) + var(--space-3))}
 .stage{display:grid;gap:var(--space-4);grid-template-columns:minmax(0,1fr);min-width:0}
+/* The diagrams share the app palette; native disclosure and scroll regions work by keyboard. */
+#schema-details > summary{font-size:var(--text-sm);font-weight:var(--weight-semibold);cursor:pointer;margin-bottom:var(--space-3)}
+#schema-status{font-size:var(--text-xs);color:var(--text-2);margin-bottom:var(--space-3)}
+.erd-scroll{overflow:auto;max-height:440px;border:1px solid var(--border);border-radius:var(--radius-sm);margin:var(--space-3) 0;background:var(--surface-2)}
+.erd-scroll:focus-visible,#schema-panel summary:focus-visible{outline:var(--border-focus-width) solid var(--focus);outline-offset:3px}
+.erd-svg{display:block;max-width:none;font:11px var(--font-mono);color:var(--text)}
+.erd-svg text{fill:currentColor}
+.erd-table rect{fill:var(--paper);stroke:var(--border);stroke-width:1}
+.erd-active-table rect{fill:var(--info-tint);stroke:var(--accent-text);stroke-width:2}
+.erd-title{font-weight:700}
+.erd-edge{fill:none;stroke:var(--text-3);stroke-width:1.5}
+.erd-active-edge{stroke:var(--accent-text);stroke-width:3}
+.erd-query-edge{stroke:var(--warning);stroke-dasharray:6 4;stroke-width:2}
+.erd-instances{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.erd-instance{font:var(--text-2xs) var(--font-mono);padding:var(--space-1) var(--space-2);background:var(--info-tint);color:var(--info-tint-text);border-radius:var(--radius-sm)}
+.erd-joins{padding-left:var(--space-5);margin:var(--space-3) 0;font-size:var(--text-xs)}
+.erd-joins li{padding:var(--space-2);margin:var(--space-2) 0;overflow-wrap:anywhere}
+.erd-joins code,.erd-joins span,.erd-joins small{display:block;margin-top:var(--space-1)}
+.erd-declared{border-left:3px solid var(--accent-text)}
+.erd-unlinked{border-left:3px dashed var(--warning)}
+#schema-text{font-size:var(--text-xs);overflow-wrap:anywhere}
+#schema-text summary{cursor:pointer;color:var(--accent-text)}
+#schema-text h3{margin:var(--space-3) 0 var(--space-1)}
+#schema-text ul{padding-left:var(--space-5)}
 .card{background:var(--paper);border:1px solid var(--border);border-radius:var(--radius-md);padding:var(--space-5);min-width:0;box-shadow:var(--shadow-1)}
 .card > h2{font-size:var(--text-sm);font-weight:var(--weight-semibold);margin-bottom:var(--space-1)}
 .card .hint{font-size:var(--text-xs);color:var(--text-2);margin-bottom:var(--space-3)}

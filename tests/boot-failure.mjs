@@ -45,7 +45,7 @@ function copyPage(b64) {
 function dom(dir, query) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'qm-chrome-'));
   try {
-    return execFileSync(CHROME, ['--headless', '--disable-gpu', '--no-sandbox', '--no-first-run', `--user-data-dir=${profile}`,
+    return execFileSync(CHROME, ['--headless', '--disable-gpu', '--no-sandbox', '--no-first-run', '--disable-background-networking', '--disable-component-update', '--host-resolver-rules=MAP * ~NOTFOUND', `--user-data-dir=${profile}`,
       '--virtual-time-budget=1500', '--dump-dom', pathToFileURL(path.join(dir, 'index.html')).href + query],
       { encoding: 'utf8', timeout: 60000, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 << 20 });
   } finally { fs.rmSync(profile, { recursive: true, force: true }); }
