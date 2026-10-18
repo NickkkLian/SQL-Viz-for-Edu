@@ -19,6 +19,10 @@ jobs:
         run: node check.mjs
       - name: exercise targets, conditions, display and saved progress
         run: node tests/upgrade.mjs
+      - name: schema parsing, join paths and mutation guards
+        run: |
+          node tests/schema.mjs
+          node tests/schema.mjs --mutations
 
   break:
     runs-on: ubuntu-latest

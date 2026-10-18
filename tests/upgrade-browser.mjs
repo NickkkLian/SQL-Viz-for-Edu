@@ -95,6 +95,50 @@ try {
     await evaluate(`var e=document.querySelector('#ctl input[aria-label="Value"]'); e.value='3.4'; e.dispatchEvent(new Event('input',{bubbles:true}))`);
     return evaluate(`document.querySelector('#mirror pre').textContent.includes('HAVING AVG(st.gpa)>3.4') && !!document.querySelector('#results table.data tbody tr')`);
   });
+  await navigate('?db=ecommerce&tables=customer&mode=practice');
+  await test('practice never reveals the hidden target in the query diagram', () => evaluate(`document.querySelectorAll('#query-path .erd-instance').length===0 && document.querySelector('#schema-status').textContent.includes('Run a query')`));
+  await test('running a four-table aliased query highlights all three declared relationships', () => evaluate(`document.querySelector('#editor').value='SELECT c.cust_id FROM customer c JOIN order_hdr o ON o.cust_id=c.cust_id JOIN order_item i ON i.order_id=o.order_id JOIN product p ON p.prod_id=i.prod_id'; document.querySelector('#mirror .btn-primary').click(); document.querySelectorAll('#schema-graph .erd-active-edge').length===3 && document.querySelectorAll('#query-path .erd-instance').length===4 && document.querySelectorAll('#schema-graph .erd-active-table').length===4 && document.querySelector('#schema-status').textContent.includes('Your last executed query')`));
+  await test('editing a draft does not change the last executed path', () => evaluate(`document.querySelector('#editor').value='SELECT * FROM product'; document.querySelector('#editor').dispatchEvent(new Event('input',{bubbles:true})); document.querySelectorAll('#query-path .erd-instance').length===4`));
+  const erdShots = process.env.QM_SCREENSHOTS;
+  const captureER = async name => {
+    if (!erdShots) return;
+    fs.mkdirSync(erdShots, { recursive: true });
+    for (const width of [1440, 390]) {
+      await cdp('Emulation.setDeviceMetricsOverride', { width, height: width===1440?1100:844, deviceScaleFactor: 1, mobile: false });
+      await evaluate(`document.querySelector('#schema-panel').scrollIntoView({block:'start'})`);
+      await test(name + ' ' + width + 'px: diagram overflows only within keyboard scroll regions', () => evaluate(`document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('#schema-panel .erd-scroll')].every(e=>e.tabIndex===0) && (innerWidth>600 || document.querySelector('#schema-graph').scrollWidth>document.querySelector('#schema-graph').clientWidth)`));
+      const shot = await cdp('Page.captureScreenshot', { format: 'png' });
+      fs.writeFileSync(path.join(erdShots, name + '-' + width + '.png'), Buffer.from(shot.data, 'base64'));
+      await evaluate(`document.querySelector('#schema-graph').scrollIntoView({block:'start'})`);
+      const schemaShot = await cdp('Page.captureScreenshot', { format: 'png' });
+      fs.writeFileSync(path.join(erdShots, name + '-schema-' + width + '.png'), Buffer.from(schemaShot.data, 'base64'));
+    }
+  };
+  await captureER('erd-multi-join');
+  await test('a self-join renders distinct alias nodes and the declared schema loop', () => evaluate(`document.querySelector('#editor').value='SELECT child.cust_id FROM customer child LEFT JOIN customer parent ON child.referred_by=parent.cust_id'; document.querySelector('#mirror .btn-primary').click(); document.querySelectorAll('#query-path .erd-instance').length===2 && document.querySelector('#query-path').textContent.includes('AS child') && document.querySelector('#query-path').textContent.includes('AS parent') && document.querySelectorAll('#schema-graph .erd-active-edge').length===1 && document.querySelectorAll('#schema-graph .erd-active-table').length===1`));
+  await captureER('erd-self-join');
+  await test('a valid non-key join says plainly it has no declared foreign key', () => evaluate(`document.querySelector('#editor').value='SELECT a.cust_id FROM customer a JOIN customer b ON a.city=b.city'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#query-path').textContent.includes('No declared foreign key for this join.') && document.querySelectorAll('#schema-graph .erd-active-edge').length===0 && !!document.querySelector('#query-path .erd-query-edge')`));
+  await captureER('erd-no-foreign-key');
+  await test('diagram disclosure and scroll region are keyboard operable', async () => {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
+    await evaluate(`document.querySelector('#schema-heading').focus()`);
+    await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 });
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    if (!await evaluate(`!document.querySelector('#schema-details').open`)) throw Error('Enter did not close disclosure; focus=' + await evaluate('document.activeElement.id'));
+    await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 });
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    await evaluate(`document.querySelector('#schema-graph').focus(); document.querySelector('#schema-text').open=true`);
+    await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+    await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
+    await new Promise(r => setTimeout(r, 200));
+    const state = await evaluate(`({open:document.querySelector('#schema-details').open, focus:document.activeElement.id, scroll:document.querySelector('#schema-graph').scrollLeft, text:document.querySelector('#schema-description').textContent.includes('primary key')})`);
+    if (!state.open || state.focus!=='schema-graph' || !state.scroll || !state.text) throw Error(JSON.stringify(state));
+    return true;
+  });
+  await test('a nested query runs in SQLite but explicitly declines an inaccurate diagram', () => evaluate(`document.querySelector('#editor').value='SELECT * FROM (SELECT * FROM customer)'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#schema-status').textContent.includes('Path unavailable') && document.querySelectorAll('#schema-graph .erd-active-table').length===0`));
+  await test('a SQLite error clears highlights rather than implying a successful trace', () => evaluate(`document.querySelector('#editor').value='SELECT bogus FROM customer'; document.querySelector('#mirror .btn-primary').click(); !!document.querySelector('#practice-error') && document.querySelectorAll('#query-path .erd-instance').length===0`));
+  await navigate('?db=movies&tables=film,director');
+  await test('Explore highlights its actual bridge join and resets across dataset changes', () => evaluate(`document.querySelectorAll('#schema-graph .erd-active-edge').length===2 && [...document.querySelectorAll('#schema-graph .erd-active-table')].some(e=>e.dataset.table==='cast_link') && document.querySelector('#schema-status').textContent.includes('Explore query')`));
   const blockedStorage = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(window,'localStorage',{get(){throw Error('blocked')}})` });
   await navigate('?db=hospital&exercise=names');
   await test('blocked storage still allows practice and reports unsaved progress', () => evaluate(`!!document.querySelector('#editor') && document.querySelector('#exercise-progress').textContent.includes('unavailable')`));

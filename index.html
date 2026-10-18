@@ -43,6 +43,16 @@
     </aside>
     <section class="stage">
       <section class="card mirror" id="mirror" aria-live="polite"></section>
+      <section class="card" id="schema-panel" aria-labelledby="schema-heading">
+        <details id="schema-details" open>
+          <summary id="schema-heading">Schema &amp; query path</summary>
+          <p class="hint">PK = primary key · FK = foreign key. Solid lines are declared relationships; dashed lines are joins without a confirmed foreign key. Highlighted tables and lines belong to the last executed query. Scroll either diagram to explore, or open the text version below.</p>
+          <p id="schema-status" role="status"></p>
+          <div id="query-path"></div>
+          <div id="schema-graph" class="erd-scroll" tabindex="0" role="region" aria-label="Schema diagram, scroll to explore"></div>
+          <details id="schema-text"><summary>Tables, columns &amp; relationships as text</summary><div id="schema-description"></div></details>
+        </details>
+      </section>
       <section class="card" id="results"></section>
     </section>
   </div>
@@ -62,6 +72,7 @@
 <script src="vendor/sql-wasm.js"></script>
 <script src="vendor/sql-wasm-b64.js"></script>
 <script src="engine.js?v=2.1.0"></script>
+<script src="schema.js"></script>
 <script src="appearance.js"></script>
 <script src="app.js?v=2.1.0"></script>
 </body>
