@@ -1,16 +1,27 @@
 # Query Mirror
 
-**Every click becomes the SQL behind it — practice is graded on results, not wording.** A correct answer written differently passes, and you see which rows are missing or extra.
+**Learn SQL by building a query with clicks, then write an equivalent query and check its results.**
 
-Open `index.html` offline to see a live query and its result immediately. Each dataset also has **eight exercises with hints**, from selecting columns through `AND`/`OR`, `LIKE`, joins and `GROUP BY`/`HAVING`. Drafts and completion are saved in this browser when storage is available; clearing site data removes them. Choose an exercise above the mirror to begin or resume.
+For SQL learners and teachers: pick tables and filters, see the generated `SELECT`, then switch to Practice to find missing or extra rows in your answer.
 
-**Try it:** [open it with the query in the screenshot already built](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0) — two tables ticked, a two-join `SELECT`, 13 result rows — or [start from a blank page](https://nickkklian.github.io/SQL-Viz-for-Edu/). No build, no server, no account, nothing uploaded.
+**[Try the live demo](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector)** · [Start a practice exercise](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=hospital&exercise=names)
 
-[![Query Mirror: tables on the left, the generated SELECT in the middle, the result below](docs/screenshot-explore.png)](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0)
+No account, install or server. Four synthetic teaching datasets run in SQLite inside your browser.
 
-![Query Mirror](.github/header.png)
+[![Query Mirror: selected tables generate a SELECT above its result rows](docs/screenshot-explore.png)](https://nickkklian.github.io/SQL-Viz-for-Edu/)
 
-Students pick tables and set conditions in plain English; the mirror shows the single `SELECT` those clicks produce and runs it in SQLite, inside the tab. Practice mode turns it around: it hides the mirror, states the result you have to reproduce, and grades the SQL you write by comparing result sets — so a correct answer written a different way still passes.
+## Quick start
+
+Open the live demo above, or clone and open `index.html` in a modern browser; the SQLite engine is included and works offline.
+
+```sh
+git clone https://github.com/NickkkLian/SQL-Viz-for-Edu.git
+cd SQL-Viz-for-Edu
+# Open index.html in your browser. Optional checks (Node.js 20+):
+node check.mjs
+```
+
+Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The image above shows a configured query; the demo link opens the same dataset and table selection for you to explore.
 
 ## What it does
 
