@@ -35,7 +35,7 @@ if (!location.search) state = Q.exerciseState('hospital', 'names');
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
 // the loading state appears only when loading takes 300ms or more (a shorter wait shows nothing, so nothing flashes)
 let slow = false;
-const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false };
+const practice = { answer: '', verdict: null, result: null, error: null, revealed: false, showAll: false, variant: null };
 let tracedSQL = '', tracedLabel = '', tracedDB = '';
 let progressStorage = null, progressAvailable = false;
 try { progressStorage = window.localStorage; progressStorage.setItem('query-mirror.probe', '1'); progressStorage.removeItem('query-mirror.probe'); progressAvailable = true; } catch (e) {}
@@ -91,7 +91,7 @@ function openExercise(id) {
   practice.answer = Q.loadProgress(progressStorage, state.db, id).answer;
   update();
 }
-function resetPractice() { practice.answer = ''; practice.verdict = null; practice.result = null; practice.error = null; practice.revealed = false; practice.showAll = false; tracedSQL = ''; tracedLabel = ''; }
+function resetPractice() { practice.answer = ''; practice.verdict = null; practice.result = null; practice.error = null; practice.revealed = false; practice.showAll = false; practice.variant = null; tracedSQL = ''; tracedLabel = ''; }
 function toggleTable(t) {
   const i = state.tables.indexOf(t);
   if (i >= 0) state.tables.splice(i, 1); else state.tables.push(t);
@@ -390,7 +390,13 @@ function renderPractice(m) {
       v ? h('div', { class: 'verdict ' + (v.ok ? 'ok' : 'bad'), role: 'status' }, h('span', {}, v.ok ? '✓' : '✗'), h('span', {}, h('b', {}, v.ok ? 'Correct' : 'Not yet'), ' — ', v.reason, v.ok ? ' · ' + v.actualRows + ' row' + (v.actualRows === 1 ? '' : 's') : '',
         !v.ok && v.unmatchedColumns && v.unmatchedColumns.length && v.unmatchedColumns.length < (lastResult ? lastResult.columns.length : 0)
           ? h('span', { style: 'display:block;margin-top:var(--space-1)' }, 'No column in your result matches ', v.unmatchedColumns.map((c, i) => [i ? ', ' : '', h('code', {}, c)]), '.') : null)) : null,
-      v && !v.ok && practice.result ? h('div', {},
+      v && v.variantFail && practice.variant ? h('div', { id: 'counterexample' },
+        h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Counterexample: when ' + practice.variant.variant.label),
+        h('div', { class: 'legend', style: 'margin-bottom:var(--space-2)' }, h('span', { class: 'm' }, h('i'), 'expected but missing from yours'), h('span', { class: 'x' }, h('i'), 'in yours but not expected')),
+        h('div', { class: 'diff' },
+          h('div', {}, h('h3', {}, 'Expected on this data'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Expected on the counterexample data' }, resultTable(practice.variant.expected, { compact: true, mark: { miss: practice.variant.verdict.missing }, empty: 'No rows expected.' }))),
+          practice.variant.actual ? h('div', {}, h('h3', {}, 'Yours on this data'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result on the counterexample data' }, resultTable(practice.variant.actual, { compact: true, mark: { extra: practice.variant.verdict.extra }, empty: 'Your query returned no rows.' }))) : null)) : null,
+      v && !v.ok && !v.variantFail && practice.result ? h('div', {},
         h('div', { class: 'legend', style: 'margin-bottom:var(--space-2)' }, h('span', { class: 'm' }, h('i'), 'expected but missing from yours'), h('span', { class: 'x' }, h('i'), 'in yours but not expected')),
         h('div', { class: 'diff' }, h('div', {}, h('h3', {}, 'Your result (' + practice.result.rows.length + ' row' + (practice.result.rows.length === 1 ? '' : 's') + ')'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, mark: { extra: v.extra }, empty: 'Your query returned no rows.' }))))) : null,
       v && v.ok && practice.result ? h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, empty: 'Your query returned no rows.' })) : null,
@@ -400,7 +406,7 @@ function renderPractice(m) {
 }
 function runPractice() {
   const ed = $('#editor'); practice.answer = ed ? ed.value : practice.answer;
-  practice.verdict = null; practice.result = null; practice.error = null; practice.errorFromSQLite = false;
+  practice.verdict = null; practice.result = null; practice.error = null; practice.errorFromSQLite = false; practice.variant = null;
   const sql = practice.answer.trim();
   if (!ready) { toast(failed ? 'SQLite could not start. Reload the page.' : 'The engine is still loading', { alert: true }); return; }
   if (!lastResult) { practice.error = 'the task has no result to compare with (' + (lastBuildError || lastError || 'nothing selected') + ') — go back to Explore and fix the task first'; renderMirror(); return; }
@@ -413,6 +419,14 @@ function runPractice() {
     practice.result = Q.runQuery(scratch, sql.replace(/;\s*$/, ''));
     tracedSQL = sql; tracedLabel = 'Your last executed query';
     practice.verdict = Q.grade(lastResult, practice.result, { ordered: !!state.sort });
+    // Right on the teaching data: also check the exercise's counterexample datasets (engine.js VARIANTS), but only while
+    // the task is still the exercise as defined (the student may have changed it in Explore).
+    if (practice.verdict.ok && exercise && Q.variantsFor(state.db, exercise).length && Q.buildSQL(state).sql === Q.buildSQL(Q.exerciseState(state.db, exercise)).sql) {
+      const vr = Q.gradeOnVariants(state.db, exercise, sql.replace(/;\s*$/, ''), v => { const d = new SQL.Database(dbs[state.db].export()); d.run(v.sql); return d; });
+      practice.variant = vr;
+      if (!vr.ok) practice.verdict = { ...practice.verdict, ok: false, missing: [], extra: [], variantFail: true, reason: 'right on the teaching data, but not when ' + vr.variant.label + ' (' + vr.verdict.reason + ')' };
+      else practice.verdict = { ...practice.verdict, reason: practice.verdict.reason + '; also right on ' + vr.checked + ' counterexample dataset' + (vr.checked === 1 ? '' : 's') };
+    }
     practice.showAll = !practice.verdict.ok;
   } catch (e) { practice.error = e.message; practice.errorFromSQLite = true; }
   finally { scratch.close(); }

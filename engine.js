@@ -557,6 +557,48 @@ const EXERCISES={
     {id:'groups',title:'Average GPA by major',prompt:'Return majors whose average GPA exceeds 3.4, with that average.',hint:'GROUP BY major and HAVING AVG(gpa) > 3.4.',tables:['student'],cols:['st_major','st_gpa'],group:{col:'st_major',aggs:{st_gpa:'AVG'},having:[{aggCol:'st_gpa|AVG',op:'is more than',val:'3.4'}]},referenceSQL:'SELECT major, AVG(gpa) FROM student GROUP BY major HAVING AVG(gpa)>3.4'}
   ]
 };
+// Counterexample datasets (variants). A query can return the right rows on the one teaching dataset by luck
+// (a boundary written as >= instead of >, or the rows typed in as literals). Each variant is the teaching data plus
+// a few hand-written rows: one row on the boundary the task excludes, and one row the task includes. The task's own
+// target is re-run on each variant and the student's query must still match. Variants only ADD rows.
+const VARIANTS={
+  hospital:{
+    and:[{id:'fee-250',label:'two appointments are added, with fees of exactly 250 and 200',sql:"INSERT INTO appointment VALUES (3901,101,201,'2024-06-01','Check-up',250),(3902,102,202,'2024-06-02','Check-up',200);"}],
+    groups:[{id:'one-in-halifax',label:'one patient in Halifax and two in Victoria are added',sql:"INSERT INTO patient VALUES (901,'Lee','Sam','1991-01-01','M','Halifax','CA'),(902,'Ng','Ada','1988-05-02','F','Victoria','CA'),(903,'Roy','Ben','1979-09-30','M','Victoria','CA');"}]
+  },
+  ecommerce:{
+    prices:[{id:'price-50',label:'two products are added, priced exactly 50 and 64.50',sql:"INSERT INTO product VALUES ('P901','Desk Lamp','Office',30,50.0),('P902','Monitor Arm','Office',12,64.5);"}],
+    and:[{id:'edges',label:'three products are added: stock exactly 50, price exactly 50, and one well inside both limits',sql:"INSERT INTO product VALUES ('P903','Cable Kit','Electronics',50,20.0),('P904','Yoga Block','Sports',80,50.0),('P905','Pen Set','Office',120,9.5);"}],
+    groups:[{id:'avg-50',label:'a Garden category averaging exactly 50 and an Audio category averaging 120 are added',sql:"INSERT INTO product VALUES ('P906','Planter','Garden',40,50.0),('P907','Speaker','Audio',25,120.0);"}]
+  },
+  movies:{
+    groups:[{id:'avg-8',label:'a Western rated exactly 8.0 and a Musical rated 8.6 are added',sql:"INSERT INTO film VALUES ('F901','Dust Road',2019,8.0,'Western',41.0,118),('F902','City of Song',2022,8.6,'Musical',210.0,131);"}]
+  },
+  university:{
+    groups:[{id:'avg-3.4',label:'a Philosophy student with a GPA of exactly 3.4 and a Music student with 3.9 are added',sql:"INSERT INTO student VALUES (1901,'Kant','Ivy','Philosophy',2023,3.4,NULL),(1902,'Bach','Leo','Music',2022,3.9,NULL);"}]
+  }
+};
+function variantsFor(db,id){ return ((VARIANTS[db]||{})[id])||[]; }
+// Grade a student's query on each variant of an exercise. open(variant) returns a fresh database (the teaching data
+// with variant.sql applied); it is closed here. The first variant that fails is returned with its verdict and both
+// results, so the page can show the counterexample rows.
+function gradeOnVariants(db,id,sql,open){
+  const vs=variantsFor(db,id), state=exerciseState(db,id);
+  if(!state||!vs.length) return {ok:true, checked:0};
+  const target=buildSQL(state).sql, ordered=!!state.sort;
+  for(const v of vs){
+    const d=open(v);
+    try{
+      const expected=runQuery(d,target);
+      let actual;
+      try{ actual=runQuery(d,sql); }
+      catch(e){ return {ok:false, checked:vs.length, variant:v, expected, actual:null, verdict:{ok:false, missing:[], extra:[], reason:'SQL error on the variant: '+e.message}}; }
+      const verdict=grade(expected,actual,{ordered});
+      if(!verdict.ok) return {ok:false, checked:vs.length, variant:v, expected, actual, verdict};
+    } finally { if(d&&d.close) d.close(); }
+  }
+  return {ok:true, checked:vs.length};
+}
 function exerciseState(db,id){
   const task=(EXERCISES[db]||[]).find(t=>t.id===id);
   if(!task) return null;
@@ -827,7 +869,7 @@ function decodeState(search){
   return {state:exercise?exerciseState(db,exercise):st, mode:exercise?'practice':mode, exercise};
 }
 
-return { VERSION, DDL, SCHEMA, OPS_TEXT, OPS_NUM, AGG_LABELS, HAV_OPS, LIMITS, EXERCISES, exerciseState, loadProgress, saveProgress,
+return { VERSION, DDL, SCHEMA, OPS_TEXT, OPS_NUM, AGG_LABELS, HAV_OPS, LIMITS, EXERCISES, VARIANTS, variantsFor, gradeOnVariants, exerciseState, loadProgress, saveProgress,
          emptyState, bridgesFor, allTables, availableCols, defaultCols, findCol, buildFrom, opToSQL, buildSQL,
          formatSQL, grade, runQuery, isSelectOnly, encodeState, decodeState };
 });
