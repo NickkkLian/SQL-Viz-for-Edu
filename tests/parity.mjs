@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Query Mirror — tests/parity.mjs
 // Proves the rewrite kept the original explorer's SQL: loads the query builder out of the ORIGINAL single-file app
-// (commit 5316da6, before engine.js existed), runs it in a sandbox over every state in tests/fixtures.json, and requires
+// (commit 6d58775c8a619a9c990ddd2a2f40a1b392885bee, before engine.js existed), runs it in a sandbox over every state in tests/fixtures.json, and requires
 // the new engine.buildSQL() to produce byte-identical SQL.
 //
-//   git show 5316da6:index.html > /tmp/explorer-5316da6.html
-//   node tests/parity.mjs /tmp/explorer-5316da6.html
+//   git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
+//   node tests/parity.mjs /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
 //
 // Exits 1 on any difference, 2 if the old file does not look like the original explorer.
 import fs from 'node:fs';
@@ -18,7 +18,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const Q = require(path.join(ROOT, 'engine.js'));
 
 const oldPath = process.argv[2];
-if (!oldPath) { console.error('usage: node tests/parity.mjs <index.html from commit 5316da6>'); process.exit(2); }
+if (!oldPath) { console.error('usage: node tests/parity.mjs <index.html from commit 6d58775c8a619a9c990ddd2a2f40a1b392885bee>'); process.exit(2); }
 const oldSrc = fs.readFileSync(oldPath, 'utf8');
 if (!oldSrc.includes('function recomputeBridges(') || oldSrc.includes('engine.js')) {
   console.error('not the original single-file explorer (expected recomputeBridges() and no engine.js)'); process.exit(2);

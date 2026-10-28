@@ -50,8 +50,8 @@ jobs:
           node-version: '22'
       - name: engine.js reproduces the original explorer's SQL
         run: |
-          git show 5316da6:index.html > "$RUNNER_TEMP/explorer-5316da6.html"
-          node tests/parity.mjs "$RUNNER_TEMP/explorer-5316da6.html"
+          git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > "$RUNNER_TEMP/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html"
+          node tests/parity.mjs "$RUNNER_TEMP/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html"
 
   boot-failure:
     runs-on: ubuntu-latest

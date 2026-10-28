@@ -105,11 +105,11 @@ node check.mjs --break
 Alters one fixture's SQL and another's row count and must exit non-zero. If it ever passes, the fixture checks are not actually running.
 
 ```bash
-git show 5316da6:index.html > /tmp/explorer-5316da6.html
-node tests/parity.mjs /tmp/explorer-5316da6.html
+git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
+node tests/parity.mjs /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
 ```
 
-The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `5316da6`), runs it in a sandbox over every fixture state, and requires `engine.js` to produce byte-identical SQL.
+The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `6d58775c8a619a9c990ddd2a2f40a1b392885bee`), runs it in a sandbox over every fixture state, and requires `engine.js` to produce byte-identical SQL.
 
 ```bash
 node tests/boot-failure.mjs
