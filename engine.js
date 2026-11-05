@@ -688,12 +688,18 @@ function opToSQL(col,op,val){
   return null;
 }
 
-// Click state → the single SELECT the explorer runs. Same text the original explorer produced, so
-// tests/fixtures.json pins the generator (see check.mjs).
+// Click state → the SELECT the explorer executes. A single table uses its own column
+// names. Joins retain qualified expressions so shared column names stay unambiguous.
 function buildSQL(state){
   const db=state.db; const tables=(state.tables||[]).filter(t=>SCHEMA[db]&&SCHEMA[db].tables[t]);
-  const fromSQL=buildFrom(db, tables); if(!fromSQL) return {sql:null, error:'no tables selected'};
-  const allCols=availableCols(db, tables);
+  let fromSQL=buildFrom(db, tables); if(!fromSQL) return {sql:null, error:'no tables selected'};
+  const singleTable=allTables(db,tables).length===1;
+  let allCols=availableCols(db, tables);
+  if(singleTable){
+    const prefix=SCHEMA[db].tables[tables[0]].alias+'.';
+    fromSQL=tables[0];
+    allCols=allCols.map(col=>({...col,expr:col.expr.split(prefix).join('')}));
+  }
   const visible=state.cols||[];
   const selCols=allCols.filter(c=>visible.includes(c.id));
   if(!selCols.length) return {sql:null, error:'no columns chosen'};
@@ -703,17 +709,25 @@ function buildSQL(state){
   if(group){
     const gbCol=allCols.find(c=>c.id===group.col);
     const parts=[];
-    if(gbCol) parts.push(gbCol.expr+' AS "'+gbCol.label+'"');
-    selCols.forEach(c=>{ if(c.id===group.col) return; if(c.type!=='number'){ parts.push(c.expr+' AS "'+c.label+'"'); extraGroupByCols.push(c.expr); } });
+    if(gbCol) parts.push(singleTable?gbCol.expr:gbCol.expr+' AS "'+gbCol.label+'"');
+    selCols.forEach(c=>{ if(c.id===group.col) return; if(c.type!=='number'){ parts.push(singleTable?c.expr:c.expr+' AS "'+c.label+'"'); extraGroupByCols.push(c.expr); } });
     let hasAgg=false;
-    selCols.forEach(c=>{ if(c.id===group.col) return; const fn=aggFns[c.id]; if(fn&&fn!=='none'){ parts.push(fn+'('+c.expr+') AS "'+AGG_LABELS[fn]+' of '+c.label+'"'); hasAgg=true; } });
-    if(!hasAgg) parts.push('COUNT(*) AS "Count"');
+    selCols.forEach(c=>{ if(c.id===group.col) return; const fn=aggFns[c.id]; if(fn&&fn!=='none'){ parts.push(fn+'('+c.expr+')'+(singleTable?'':' AS "'+AGG_LABELS[fn]+' of '+c.label+'"')); hasAgg=true; } });
+    if(!hasAgg) parts.push(singleTable?'COUNT(*)':'COUNT(*) AS "Count"');
     selectExpr=parts.join(', ');
   } else {
-    selectExpr=(state.distinct?'DISTINCT ':'')+selCols.map(c=>c.expr+' AS "'+c.label+'"').join(', ');
+    selectExpr=(state.distinct?'DISTINCT ':'')+selCols.map(c=>singleTable?c.expr:c.expr+' AS "'+c.label+'"').join(', ');
   }
   let sql='SELECT '+selectExpr+' FROM '+fromSQL;
-  const conds=(state.filters||[]).map(f=>{const col=allCols.find(c=>c.id===f.col); const text=col&&opToSQL(col,f.op,f.val); return text?{text,join:f.join==='OR'?'OR':'AND'}:null;}).filter(Boolean);
+  const conds=(state.filters||[]).map(f=>{
+    const col=allCols.find(c=>c.id===f.col);
+    let text=col&&opToSQL(col,f.op,f.val);
+    if(singleTable&&text){
+      // Only operator tokens outside string literals receive display spacing.
+      text=text.replace(/'(?:''|[^'])*'|!=|<=|>=|=|<|>/g,token=>token.startsWith("'")?token:' '+token+' ');
+    }
+    return text?{text,join:f.join==='OR'?'OR':'AND'}:null;
+  }).filter(Boolean);
   if(conds.length) sql+=' WHERE '+conds.map((c,i)=>(i?' '+c.join+' ':'')+c.text).join('');
   if(group){
     const gbCol=allCols.find(c=>c.id===group.col);
@@ -722,13 +736,14 @@ function buildSQL(state){
       const parts=String(h.aggCol||'').split('|'); const cid=parts[0], fn=parts[1]; const col=allCols.find(c=>c.id===cid);
       if(!col||!fn) return null;
       const havOp=HAV_OPS.find(o=>o.label===h.op);
-      return havOp?fn+'('+col.expr+')'+havOp.sql+Number(h.val):null;
+      const space=singleTable?' ':'';
+      return havOp?fn+'('+col.expr+')'+space+havOp.sql+space+Number(h.val):null;
     }).filter(Boolean);
     if(havConds.length) sql+=' HAVING '+havConds.join(' AND ');
   }
   if(state.sort&&state.sort.col){ const col=allCols.find(c=>c.id===state.sort.col); if(col) sql+=' ORDER BY '+col.expr+' '+(state.sort.dir==='DESC'?'DESC':'ASC'); }
   if(state.limit&&state.limit!=='All') sql+=' LIMIT '+state.limit;
-  return {sql};
+  return {sql:sql+(singleTable?';':'')};
 }
 
 // ── SQL DISPLAY (executable SQLite; protect quoted values/identifiers before laying out clauses) ──
@@ -754,7 +769,7 @@ function formatSQL(sql) {
       const prev = (i > 0 ? parts[i-1] : '').trim().toUpperCase();
       if (prev === 'SELECT' || prev === 'SELECT DISTINCT') {
         const cols = p.split(',').map(function(c){ return c.trim(); });
-        out += NL + '  ' + cols.join(',' + NL + '  ');
+        out += cols.length<=3 && p.length<=88 ? ' '+p : NL + '  ' + cols.join(',' + NL + '  ');
       } else out += ' ' + p;
     }
   }

@@ -72,7 +72,14 @@ function highlightSQL(sql) {
   s = s.replace(/\b([a-zA-Z_][a-zA-Z0-9_]*)\./g, (m, alias) => tok('st', alias) + '.');
   return s.replace(/\u0000T(\d+)\u0000/g, (_, i) => tokens[+i]);
 }
-const cols = () => Q.availableCols(state.db, state.tables);
+const cols = () => {
+  const available = Q.availableCols(state.db, state.tables);
+  if (Q.allTables(state.db, state.tables).length !== 1) return available;
+  return available.map(column => {
+    const name = column.expr.replace(/^[a-z]+\./, '');
+    return /^[a-z_][a-z_0-9]*$/i.test(name) ? { ...column, label: name } : column;
+  });
+};
 const colById = id => cols().find(c => c.id === id);
 const tablesLabel = () => {
   const sc = Q.SCHEMA[state.db];
@@ -203,41 +210,52 @@ function runMirror() {
 }
 
 function renderSchema() {
+  const narrow = window.matchMedia('(max-width:700px)').matches;
   const schema = schemas[state.db];
   // In practice the hidden target is never traced; edits do not replace the last run.
   const trace = ER.queryPath(tracedDB === state.db ? tracedSQL : '', schema);
   const active = new Set(trace.instances.map(t => t.table));
   fill($('#schema-status'), trace.message || tracedLabel + ' · ' + trace.instances.length + ' table instances · ' + trace.joins.length + ' joins');
-  const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + ' AS ' + t.alias : '?'; };
+  const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + (t.alias === t.table ? '' : ' AS ' + t.alias) : '?'; };
   fill($('#query-path'),
     trace.instances.length ? h('div', { class: 'erd-instances', 'aria-label': 'Query table instances' }, trace.instances.map((t, i) =>
-      h('span', { class: 'erd-instance' }, (i + 1) + ' · ' + t.table + ' AS ' + t.alias))) : null,
+      h('span', { class: 'erd-instance' }, (i + 1) + ' · ' + instanceLabel(t.id)))) : null,
     trace.joins.length ? h('ol', { class: 'erd-joins' }, trace.joins.map(j => h('li', { class: j.matches.length ? 'erd-declared' : 'erd-unlinked' },
       h('strong', {}, j.kind.toUpperCase() + ' ' + instanceLabel(j.target)),
       h('code', {}, j.predicate || 'No ON condition (all combinations)'),
       h('span', {}, j.note),
       j.pairs.map(p => h('small', {}, p.a.instance.alias + '.' + p.a.column + ' ' + p.operator.toUpperCase() + ' ' + p.b.instance.alias + '.' + p.b.column))))) : null);
   if (trace.instances.length) {
-    const pathGraph = h('svg', { width: trace.instances.length * 220, height: 100 + trace.joins.length * 26, class: 'erd-svg', 'aria-hidden': 'true', focusable: 'false' });
-    trace.joins.forEach((j, index) => {
-      const targetIndex = trace.instances.findIndex(t => t.id === j.target);
-      const sources = [...new Set(j.pairs.map(p => p.a.instance.id === j.target ? p.b.instance.id : p.a.instance.id))];
-      if (!sources.length && !j.predicate && !j.kind.includes('natural')) sources.push(trace.instances[targetIndex - 1].id);
+    const pathGraph = h('svg', { width:narrow ? 296 : trace.instances.length * 220, height:narrow ? trace.instances.length * 120 : 100 + trace.joins.length * 26, class:'erd-svg', 'aria-hidden':'true', focusable:'false' });
+    trace.joins.forEach((join,index) => {
+      const target = trace.instances.findIndex(table=>table.id===join.target);
+      const sources = [...new Set(join.pairs.map(pair=>pair.a.instance.id===join.target ? pair.b.instance.id : pair.a.instance.id))];
+      if (!sources.length && !join.predicate && !join.kind.includes('natural')) sources.push(trace.instances[target-1].id);
       sources.forEach(id => {
-        const from = trace.instances.findIndex(t => t.id === id), y = 95 + index * 26;
-        pathGraph.append(h('path', { d: `M ${from * 220 + 108} 68 V ${y} H ${targetIndex * 220 + 108} V 68`, class: j.matches.length ? 'erd-edge erd-active-edge' : 'erd-edge erd-query-edge' }),
-          h('text', { x: (from + targetIndex) * 110 + 108, y: y - 5, 'text-anchor': 'middle' }, 'Join ' + (index + 1) + (j.matches.length ? ' · FK' : ' · no confirmed FK')));
+        const from = trace.instances.findIndex(table=>table.id===id);
+        const y = 95 + index * 26;
+        const gutter = 236 + index % 4 * 12;
+        const path = narrow
+          ? 'M108 '+(from*120+68)+' H'+gutter+' V'+(target*120+8)+' H108'
+          : 'M '+(from*220+108)+' 68 V '+y+' H '+(target*220+108)+' V68';
+        pathGraph.append(h('path', {d:path, class:join.matches.length ? 'erd-edge erd-active-edge' : 'erd-edge erd-query-edge'}));
+        if (!narrow) pathGraph.append(h('text', {x:(from+target)*110+108,y:y-5,'text-anchor':'middle'}, 'Join '+(index+1)+(join.matches.length ? ' · FK' : ' · no confirmed FK')));
       });
     });
-    trace.instances.forEach((t, i) => pathGraph.append(h('g', { class: 'erd-table erd-active-table' },
-      h('rect', { x: i * 220 + 8, y: 8, width: 200, height: 60, rx: 8 }),
-      h('text', { x: i * 220 + 20, y: 32, class: 'erd-title' }, t.table),
-      h('text', { x: i * 220 + 20, y: 54 }, 'AS ' + t.alias))));
-    $('#query-path').prepend(h('div', { class: 'erd-scroll', tabindex: '0', role: 'region', 'aria-label': 'Query join diagram, aliases are separate nodes; scroll to explore' }, pathGraph));
+    trace.instances.forEach((table,index) => {
+      const x = narrow ? 8 : index * 220 + 8;
+      const y = narrow ? index * 120 + 8 : 8;
+      pathGraph.append(h('g', {class:'erd-table erd-active-table'},
+        h('rect', {x,y,width:200,height:60,rx:8}),
+        h('text', {x:x+12,y:y+24,class:'erd-title'}, table.table),
+        h('text', {x:x+12,y:y+46}, table.alias===table.table ? 'Source table' : narrow ? 'Alias '+(index+1) : 'AS '+table.alias)));
+    });
+    $('#query-path').prepend(h('div', {class:'erd-scroll',tabindex:'0',role:'region','aria-label':'Query join diagram. Each numbered alias is named in full below.'},pathGraph));
   }
-  const positions = new Map(schema.tables.map((t, i) => [t.name, { x: 32 + (i % 3) * 310, y: 32 + Math.floor(i / 3) * 340 }]));
-  const width = Math.min(3, schema.tables.length) * 310 + 24;
-  const height = Math.ceil(schema.tables.length / 3) * 340;
+  const across = narrow ? 1 : 3;
+  const positions = new Map(schema.tables.map((table,index)=>[table.name,{x:narrow?16:32+(index%across)*310,y:32+Math.floor(index/across)*340}]));
+  const width = narrow ? 296 : Math.min(across,schema.tables.length)*310+24;
+  const height = Math.ceil(schema.tables.length/across)*340;
   const graph = h('svg', { width, height, viewBox: '0 0 ' + width + ' ' + height, 'aria-hidden': 'true', focusable: 'false', class: 'erd-svg' });
   for (const fk of schema.foreignKeys) {
     const a = positions.get(fk.from), b = positions.get(fk.to);
@@ -374,7 +392,7 @@ function renderPractice(m) {
     return;
   }
   const v = practice.verdict;
-  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; saveDraft(); }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
+  const editor = h('textarea', { id: 'editor', class: 'editor', spellcheck: 'false', placeholder: 'SELECT …', 'aria-label': 'Your SQL', 'aria-invalid': practice.error ? 'true' : null, 'aria-describedby': practice.error ? 'practice-error' : null, oninput: e => { practice.answer = e.target.value; saveDraft(); fitEditor(e.target); }, onkeydown: e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); runPractice(); } } });
   editor.value = practice.answer;
   const preview = expected ? resultTable(expected, { compact: true, mark: v ? { miss: v.missing } : null, limit: practice.showAll ? Infinity : 6, empty: 'This task matches no rows.' })
     : h('p', { class: 'none' }, lastBuildError ? 'This task has no result yet (' + lastBuildError + ') — go back to Explore and pick its columns.' : lastError || (slow && !failed ? 'Loading…' : ''));
@@ -385,7 +403,7 @@ function renderPractice(m) {
       h('p', { class: 'ask' }, currentExercise() ? currentExercise().prompt : ['Write one SELECT that returns exactly this result from the ', h('b', {}, DB_LABEL[state.db]), ' dataset — reading ', h('b', {}, tablesLabel()), '. The controls say it in plain English.']),
       currentExercise() ? h('details', { id: 'exercise-hint' }, h('summary', {}, 'Show hint'), h('p', {}, currentExercise().hint)) : null,
       h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Column order and column names do not matter; row order ' + (ordered ? 'does (the task has a sort)' : 'does not') + '. SQLite syntax. Only one statement, only SELECT.'),
-      h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Expected result'), h('div', { class: 'tablewrap', style: 'max-height:none', tabindex: expected ? '0' : null, role: expected ? 'region' : null, 'aria-label': expected ? 'Expected result' : null }, preview),
+      h('div', { class:'expected-preview' }, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Expected result'), h('div', { class: 'tablewrap', style: 'max-height:none', tabindex: expected ? '0' : null, role: expected ? 'region' : null, 'aria-label': expected ? 'Expected result' : null }, preview),
         expected && expected.rows.length > 6 ? h('button', { type: 'button', class: 'btn btn-ghost btn-sm', style: 'margin-top:var(--space-1)', onclick: () => { practice.showAll = !practice.showAll; renderMirror(); } }, practice.showAll ? 'Show fewer' : 'Show all ' + expected.rows.length + ' rows') : null),
       editor,
       h('div', { class: 'acts' },
@@ -412,6 +430,12 @@ function renderPractice(m) {
       practice.revealed && lastSQL ? h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'The mirror'), h('pre', { class: 'mono', style: 'margin:0;padding:var(--space-3) var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);font-size:var(--text-sm);line-height:1.7;overflow-x:auto', html: highlightSQL(Q.formatSQL(lastSQL)) })) : null
     )
   );
+  fitEditor(editor);
+}
+function fitEditor(editor) {
+  if (!editor) return;
+  editor.style.removeProperty('height');
+  if (window.matchMedia('(max-width:700px)').matches) editor.style.height = Math.max(160, editor.scrollHeight) + 'px';
 }
 function runPractice() {
   const ed = $('#editor'); practice.answer = ed ? ed.value : practice.answer;
@@ -448,11 +472,13 @@ function shareTask() {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('Task link copied — it opens straight in practice mode'), () => toast('Copy failed: ' + url, { alert: true, ms: 6000 }));
   else toast(url, { ms: 6000 });
 }
-function cellNode(v) {
-  if (v === null || v === undefined) return h('td', {}, h('span', { class: 'null' }, '—'));
-  // Display only: trims binary floating-point noise (AVG gives 3.7399999999999998). Grading compares raw values.
-  if (typeof v === 'number') return h('td', { class: 'num', title: Number.isInteger(v) ? null : String(v) }, Number.isInteger(v) ? String(v) : String(Number(v.toFixed(4))));
-  return h('td', {}, String(v));
+function cellNode(value, label) {
+  const numeric = typeof value === 'number';
+  const missing = value === null || value === undefined;
+  const text = missing ? '—' : numeric && !Number.isInteger(value) ? String(Number(value.toFixed(4))) : String(value);
+  return h('td', { class: numeric ? 'num' : null, title: numeric && !Number.isInteger(value) ? String(value) : null },
+    h('span', {class:'cell-label'}, label),
+    h('span', {class:'cell-value'}, missing ? h('span', {class:'null'}, text) : text));
 }
 function resultTable(res, opts = {}) {
   const limit = opts.limit || Infinity; const mark = opts.mark || {};
@@ -460,16 +486,16 @@ function resultTable(res, opts = {}) {
   const rows = res.rows.slice(0, limit);
   // a column whose values are all numbers is right-aligned in the header too, like its cells, as in the family's other tables
   const numeric = res.columns.map((_, j) => { const vals = res.rows.map(r => r[j]).filter(v => v !== null && v !== undefined); return vals.length > 0 && vals.every(v => typeof v === 'number'); });
-  return h('table', { class: 'data' + (opts.compact ? ' compact' : '') },
-    h('thead', {}, h('tr', {}, res.columns.map((c, j) => {
+  return h('table', { class: 'data' + (opts.compact ? ' compact' : ''), 'data-layout':res.columns.length + (opts.rowNumbers ? 1 : 0) > 3 ? 'records' : 'columns' },
+    h('thead', {}, h('tr', {}, opts.rowNumbers ? h('th', {scope:'col', 'data-row-number':true}, 'Row') : null, res.columns.map((c, j) => {
       if (!opts.sortable) return h('th', { scope: 'col', class: numeric[j] ? 'num' : null }, c);
-      const col = cols().find(x => x.label === c);
+      const col = cols().find(x => x.label === c || x.expr.replace(/\b[a-z]+\./g, '') === c);
       const active = col && state.sort && state.sort.col === col.id;
       return h('th', { scope: 'col', class: numeric[j] ? 'num' : null, 'aria-sort': active ? (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : null },
         col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, c) : c);
     }))),
-    h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, r.map(cellNode)))
-      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length || 1 }, opts.empty ? opts.empty : [h('b', {}, 'No rows match'), ' — loosen a condition above',
+    h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, opts.rowNumbers ? h('td', {'data-row-number':true}, h('span', {class:'cell-label'}, 'Row'), h('span', {class:'cell-value'}, i + 1)) : null, r.map((value,index) => cellNode(value,res.columns[index]))))
+      : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length + (opts.rowNumbers ? 1 : 0) || 1 }, opts.empty ? opts.empty : [h('b', {}, 'No rows match'), ' — loosen a condition above',
           opts.sortable && state.filters.length ? [', or ', h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')] : '.']))),
     res.rows.length > limit ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
 }
@@ -479,6 +505,7 @@ let colsOpen = false;
 function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); restoreFocus(find); }
 function renderResultsPanel() {
   const r = $('#results');
+  const optionsOpen = $('#result-controls .result-options')?.open || false;
   if (failed) { r.hidden = false; fill(r, engineFailed()); return; }
   r.hidden = mode === 'practice' && state.tables.length > 0;
   if (!state.tables.length) { fill(r, h('p', { class: 'none', style: 'font-size:var(--text-xs);color:var(--text-3)' }, 'Results appear here.')); return; }
@@ -499,14 +526,16 @@ function renderResultsPanel() {
     : lastError ? h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'The query failed'), h('pre', {}, lastError), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'Usually a condition value of the wrong type. Fix or remove it above.'),
       h('div', {}, state.filters.length ? h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')
         : h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { Object.assign(state, { cols: Q.defaultCols(state.db, state.tables), filters: [], group: null, sort: null, distinct: false, limit: 'All' }); update(); } }, 'Reset this query')))
-    : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true })) : null;
+    : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true, rowNumbers: true })) : null;
   fill(r, 
     h('div', { class:'result-heading'}, h('h2', {}, 'Matching rows'), h('span', {class:'row-count'}, lastResult ? lastResult.rows.length + ' rows' : '')),
-    h('details', {class:'result-options'}, h('summary', {}, 'Result options'), h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
+    h('details', {class:'result-options', open:optionsOpen}, h('summary', {}, 'Result options'), h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
       h('button', { type: 'button', class: 'btn btn-sm', 'aria-pressed': String(state.distinct), disabled: !!state.group, title: state.group ? 'Grouping already collapses duplicates' : 'Hide rows identical in every column', onclick: toggleDistinct }, 'Hide duplicates'),
       sortSel, dirSel, limSel,
       h('span', { class: 'showing' }, lastResult ? lastResult.rows.length + ' row' + (lastResult.rows.length === 1 ? '' : 's') + (state.limit !== 'All' ? ' (top ' + state.limit + ')' : '') : ''))),
-    body, renderSource()
+    body,
+    lastResult ? h('p', {class:'preview-status'}, '✓ Live preview') : null,
+    renderSource()
   );
   const resultOptions = r.querySelector('.result-options');
   if (resultOptions) $('#result-controls').replaceChildren(resultOptions);
@@ -528,6 +557,8 @@ function renderLesson() {
   fill($('#column-picks'), cols().filter(c=>state.tables.length===1 && state.tables[0]==='patient' ? ['pa_first','pa_last','pa_city','pa_country'].includes(c.id) : !c.hide).map(c=>h('label', {}, h('input', {type:'checkbox', checked:state.cols.includes(c.id), disabled:!!exercise, onchange:()=>toggleCol(c.id)}), h('span', {}, c.id==='pa_city'?'city':c.id==='pa_country'?'country':c.label))));
   const sourceRows = state.tables.reduce((n,t)=>n+(ROWCOUNT[state.db]?.[t]||0),0);
   const count = lastResult?.rows.length || 0;
+  const sourceLabel = state.tables.length === 1 ? Q.SCHEMA[state.db].tables[state.tables[0]].label.toLowerCase() : 'source rows';
+  $('#dataset-note').textContent = DB_LABEL[state.db] + ' dataset · ' + sourceRows + ' synthetic ' + sourceLabel;
   $('#clause-flow').hidden = mode === 'practice';
   fill($('#clause-flow'), h('div', {}, 'FROM · ' + sourceRows + ' source rows'), h('div', {class:'flow-source', 'aria-hidden':'true'}, Array.from({length:Math.min(40,sourceRows)},()=>h('i'))),
     h('div', {}, 'WHERE · ' + count + ' result rows'), h('div', {class:'flow-matched', 'aria-hidden':'true'}, Array.from({length:Math.min(40,count)},()=>h('i'))),
@@ -536,8 +567,35 @@ function renderLesson() {
   const practicing = mode === 'practice';
   $('.bench').classList.toggle('practice-workspace', practicing);
 }
+const options = $('#options');
+const optionsButton = $('#reference-open');
+optionsButton.setAttribute('aria-controls','options');
+options.querySelector('summary').addEventListener('click', () => { if (options.open) optionsButton.focus(); });
+options.addEventListener('toggle', () => {
+  optionsButton.setAttribute('aria-expanded',String(options.open));
+  if (!options.open && (options.contains(document.activeElement) || document.activeElement===document.body)) optionsButton.focus();
+});
+window.matchMedia('(max-width:700px)').addEventListener('change', () => {
+  const find = focusKey(document.activeElement);
+  renderSchema();
+  fitEditor($('#editor'));
+  restoreFocus(find);
+});
 $('#reference-open').addEventListener('click', () => { $('#options').open = !$('#options').open; $('#reference-open').setAttribute('aria-expanded', String($('#options').open)); });
-document.addEventListener('click', () => { if (colsOpen) { colsOpen = false; renderResults(); } });
+$('#result-controls').addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !colsOpen) return;
+  event.preventDefault();
+  colsOpen = false;
+  renderResults();
+  $('#result-controls .cols button')?.focus();
+});
+document.addEventListener('click', () => {
+  if (!colsOpen) return;
+  const needsFocus = document.activeElement === document.body || !!document.activeElement?.closest('#result-controls .menu');
+  colsOpen = false;
+  renderResults();
+  if (needsFocus) $('#result-controls .cols button')?.focus();
+});
 
 // ── theme / help ──
 Appearance.bindToggle($('#theme'));   // ◐ switches light/dark only (appearance.js)

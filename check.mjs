@@ -87,7 +87,7 @@ ok(Q.grade(expected, student).ok, 'fixture u02: a hand-written equivalent query 
 const studentWrong = exec('university', 'select major, max(gpa) from student group by major having avg(gpa) > 3.4');
 const wrongVerdict = Q.grade(expected, studentWrong);
 ok(!wrongVerdict.ok, 'fixture u02: MAX instead of AVG is graded wrong');
-ok(wrongVerdict.unmatchedColumns.join() === 'Average of GPA', 'fixture u02: the verdict names the one wrong column (Average of GPA), not the right one (Major)');
+ok(wrongVerdict.unmatchedColumns.join() === 'AVG(gpa)', 'fixture u02: the verdict names AVG(gpa) as the wrong expression');
 ok(Q.grade(expected, student).unmatchedColumns.length === 0, 'fixture u02: a correct answer has no unmatched columns');
 // zero-row results keep their columns, so grading still compares them
 const ZERO = 'select title, rating from film where rating >= 99';

@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#f8f7f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#161724" media="(prefers-color-scheme: dark)">
 <title>Query Mirror</title>
-<link rel="icon" href="favicon.svg?v=3.0.0" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.0.0">
-<link rel="stylesheet" href="fonts.css?v=3.0.0">
-<link rel="stylesheet" href="design-tokens.css?v=3.0.0">
-<link rel="stylesheet" href="app.css?v=3.0.0">
+<link rel="icon" href="favicon.svg?v=3.1.0" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.1.0">
+<link rel="stylesheet" href="fonts.css?v=3.1.0">
+<link rel="stylesheet" href="design-tokens.css?v=3.1.0">
+<link rel="stylesheet" href="app.css?v=3.1.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -38,6 +38,7 @@
     <section class="card mirror" id="mirror" aria-live="polite"></section>
     <section class="card" id="results"></section>
   </div>
+<footer class="lesson-footer"><span id="dataset-note">Hospital dataset · 20 synthetic patients</span><span>SQLite runs on this computer</span></footer>
   <div class="below-workspace">
       <section class="card" id="schema-panel" aria-labelledby="schema-heading">
         <details id="schema-details" open>
@@ -51,7 +52,8 @@
       </section>
   </div>
 </main>
-<footer class="honest">
+<details class="about-tool"><summary>About Query Mirror</summary>
+<div class="honest">
   <dl class="honest-in">
     <div><dt>About this tool</dt>
     <dd>Four small synthetic datasets (hospital, e-commerce, movies, university) live inside <code>engine.js</code>; SQLite runs in your browser through sql.js 1.10.2 (vendored in <code>vendor/</code>). Every checkbox, filter, grouping and sort you set is turned into one <code>SELECT</code>, shown in the mirror and executed. Practice mode hides the mirror and grades the SQL you write against the same result. No build, no server, no account, nothing uploaded.</dd></div>
@@ -60,14 +62,15 @@
     <div><dt>Source</dt>
     <dd><a href="https://github.com/NickkkLian/SQL-Viz-for-Edu" rel="noopener">github.com/NickkkLian/SQL-Viz-for-Edu</a> · MIT</dd></div>
   </dl>
-</footer>
+</div>
+</details>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <dialog id="dlg"></dialog>
-<script src="vendor/sql-wasm.js?v=3.0.0"></script>
-<script src="vendor/sql-wasm-b64.js?v=3.0.0"></script>
-<script src="engine.js?v=3.0.0"></script>
-<script src="schema.js?v=3.0.0"></script>
-<script src="appearance.js?v=3.0.0"></script>
-<script src="app.js?v=3.0.0"></script>
+<script src="vendor/sql-wasm.js?v=3.1.0"></script>
+<script src="vendor/sql-wasm-b64.js?v=3.1.0"></script>
+<script src="engine.js?v=3.1.0"></script>
+<script src="schema.js?v=3.1.0"></script>
+<script src="appearance.js?v=3.1.0"></script>
+<script src="app.js?v=3.1.0"></script>
 </body>
 </html>

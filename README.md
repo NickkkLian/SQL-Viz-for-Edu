@@ -21,7 +21,7 @@ cd SQL-Viz-for-Edu
 node check.mjs
 ```
 
-The opening lesson selects first names and cities for the three Toronto patients. The source preview shows the real teaching rows beside the result. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
+The opening lesson generates SELECT first_name, city FROM patient WHERE city = 'Toronto'; and uses those column names in the chips and both tables. Matching rows includes row numbers and a Live preview status. The source preview shows the real teaching rows beside the result. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
 
 Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The screenshot shows the opening lesson. The demo link opens the Movies dataset.
 
@@ -111,7 +111,7 @@ git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > /tmp/explorer-6d5
 node tests/parity.mjs /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
 ```
 
-The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `6d58775c8a619a9c990ddd2a2f40a1b392885bee`), runs it in a sandbox over every fixture state, and requires `engine.js` to produce byte-identical SQL.
+The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `6d58775c8a619a9c990ddd2a2f40a1b392885bee`), runs it in a sandbox over every fixture state and compares ordered row values and column counts. Join queries also retain byte-identical SQL. Single-table queries use plain column names and no AS labels.
 
 ```bash
 node tests/boot-failure.mjs

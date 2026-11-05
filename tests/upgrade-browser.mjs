@@ -61,7 +61,7 @@ try {
     await evaluate(`var e=document.querySelectorAll('select[aria-label="Column"]')[1]; e.value='pa_city'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
     await evaluate(`var e=document.querySelectorAll('input[aria-label="Value"]')[1]; e.value='Toronto'; e.dispatchEvent(new Event('input',{bubbles:true}))`);
     await evaluate(`var e=document.querySelector('select[aria-label="Join condition 2"]'); e.value='OR'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
-    return evaluate(`document.querySelector('#mirror pre').textContent.includes("LIKE 'E%'") && document.querySelector('#mirror pre').textContent.includes("OR pa.city='Toronto'") && !!document.querySelector('#results > .tablewrap table.data tbody tr') && !document.querySelector('#results [role="alert"]')`);
+    return evaluate(`document.querySelector('#mirror pre').textContent.includes("LIKE 'E%'") && document.querySelector('#mirror pre').textContent.includes("OR city = 'Toronto'") && !!document.querySelector('#results > .tablewrap table.data tbody tr') && !document.querySelector('#results [role="alert"]')`);
   });
   await navigate('?db=hospital&exercise=names');
   await test('exercise link opens a fixed practice task with hint, hidden SQL and disabled target controls', () => evaluate(`!!document.querySelector('#editor') && !!document.querySelector('#exercise-hint') && !document.querySelector('#mirror pre') && document.querySelector('#controls').hidden && [...document.querySelectorAll('#tbl-list input')].every(e=>e.disabled)`));
@@ -90,14 +90,14 @@ try {
   await test('legacy custom practice link still opens the editor', () => evaluate(`!!document.querySelector('#editor') && !document.querySelector('#exercise-hint')`));
   await test('multiple statements and writes are rejected by the actual practice UI', () => evaluate(`document.querySelector('#editor').value='SELECT 1; DROP TABLE patient'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#practice-error').textContent.includes('one statement')`));
   await navigate('?db=hospital&tables=patient,doctor');
-  await test('hospital bridge join still produces 38 rows and 11 columns in the shipped engine', () => evaluate(`document.querySelector('#results .row-count').textContent==='38 rows' && document.querySelectorAll('#results > .tablewrap table.data thead th').length===11 && document.querySelector('#mirror pre').textContent.includes('appointment')`));
+  await test('hospital bridge join still produces 38 rows and 11 columns in the shipped engine', () => evaluate(`document.querySelector('#results .row-count').textContent==='38 rows' && document.querySelectorAll('#results > .tablewrap table.data thead th:not([data-row-number])').length===11 && document.querySelector('#mirror pre').textContent.includes('appointment')`));
   await navigate('?db=university&tables=student');
   await test('grouping, AVG and HAVING can still be built by clicks', async () => {
     await evaluate(`var e=document.querySelector('select[aria-label="Group rows by"]'); e.value='st_major'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
-    await evaluate(`var e=document.querySelector('select[aria-label="Aggregate for GPA"]'); e.value='AVG'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
+    await evaluate(`var e=document.querySelector('select[aria-label="Aggregate for gpa"]'); e.value='AVG'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
     await evaluate(`[...document.querySelectorAll('#ctl h3')].find(e=>e.textContent.includes('Only keep groups')).querySelector('button').click()`);
     await evaluate(`var e=document.querySelector('#ctl input[aria-label="Value"]'); e.value='3.4'; e.dispatchEvent(new Event('input',{bubbles:true}))`);
-    return evaluate(`document.querySelector('#mirror pre').textContent.includes('HAVING AVG(st.gpa)>3.4') && !!document.querySelector('#results > .tablewrap table.data tbody tr')`);
+    return evaluate(`document.querySelector('#mirror pre').textContent.includes('HAVING AVG(gpa) > 3.4') && !!document.querySelector('#results > .tablewrap table.data tbody tr')`);
   });
   await navigate('?db=ecommerce&tables=customer&mode=practice');
   await test('practice never reveals the hidden target in the query diagram', () => evaluate(`document.querySelectorAll('#query-path .erd-instance').length===0 && document.querySelector('#schema-status').textContent.includes('Run a query')`));
@@ -110,7 +110,7 @@ try {
     for (const width of [1440, 390]) {
       await cdp('Emulation.setDeviceMetricsOverride', { width, height: width===1440?1100:844, deviceScaleFactor: 1, mobile: false });
       await evaluate(`document.querySelector('#schema-panel').scrollIntoView({block:'start'})`);
-      await test(name + ' ' + width + 'px: diagram overflows only within keyboard scroll regions', () => evaluate(`document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('#schema-panel .erd-scroll')].every(e=>e.tabIndex===0) && (innerWidth>600 || document.querySelector('#schema-graph').scrollWidth>document.querySelector('#schema-graph').clientWidth)`));
+      await test(name + ' ' + width + 'px: diagram fits on phones and keeps keyboard regions', () => evaluate(`document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('#schema-panel .erd-scroll')].every(e=>e.tabIndex===0) && (innerWidth>600 || document.querySelector('#schema-graph').scrollWidth<=document.querySelector('#schema-graph').clientWidth)`));
       const shot = await cdp('Page.captureScreenshot', { format: 'png' });
       fs.writeFileSync(path.join(erdShots, name + '-' + width + '.png'), Buffer.from(shot.data, 'base64'));
       await evaluate(`document.querySelector('#schema-graph').scrollIntoView({block:'start'})`);
@@ -123,7 +123,7 @@ try {
   await captureER('erd-self-join');
   await test('a valid non-key join says plainly it has no declared foreign key', () => evaluate(`document.querySelector('#editor').value='SELECT a.cust_id FROM customer a JOIN customer b ON a.city=b.city'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#query-path').textContent.includes('No declared foreign key for this join.') && document.querySelectorAll('#schema-graph .erd-active-edge').length===0 && !!document.querySelector('#query-path .erd-query-edge')`));
   await captureER('erd-no-foreign-key');
-  await test('diagram disclosure and scroll region are keyboard operable', async () => {
+  await test('diagram disclosure and fitted phone regions are keyboard operable', async () => {
     await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: false });
     await evaluate(`document.querySelector('#schema-heading').focus()`);
     await cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 });
@@ -136,7 +136,7 @@ try {
     await cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowRight', code: 'ArrowRight', windowsVirtualKeyCode: 39 });
     await new Promise(r => setTimeout(r, 200));
     const state = await evaluate(`({open:document.querySelector('#schema-details').open, focus:document.activeElement.id, scroll:document.querySelector('#schema-graph').scrollLeft, text:document.querySelector('#schema-description').textContent.includes('primary key')})`);
-    if (!state.open || state.focus!=='schema-graph' || !state.scroll || !state.text) throw Error(JSON.stringify(state));
+    if (!state.open || state.focus!=='schema-graph' || state.scroll!==0 || !state.text) throw Error(JSON.stringify(state));
     return true;
   });
   await test('a nested query runs in SQLite but explicitly declines an inaccurate diagram', () => evaluate(`document.querySelector('#editor').value='SELECT * FROM (SELECT * FROM customer)'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#schema-status').textContent.includes('Path unavailable') && document.querySelectorAll('#schema-graph .erd-active-table').length===0`));

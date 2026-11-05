@@ -12,13 +12,30 @@ const run = (db, sql) => Q.runQuery(dbs[db], sql);
 const st = { ...Q.emptyState('movies'), tables: ['film'], cols: ['fi_title', 'fi_rating'], limit: '10', sort: { col: 'fi_rating', dir: 'DESC' } };
 test('displayed LIMIT is executable SQLite and returns the same ten rows', () => {
   const sql = Q.buildSQL(st).sql, shown = Q.formatSQL(sql);
-  return /\nLIMIT 10$/.test(shown) && !shown.includes('ROWNUM') && run('movies', shown).rows.length === 10 && Q.grade(run('movies', sql), run('movies', shown), { ordered: true }).ok;
+  return /\nLIMIT 10;$/.test(shown) && !shown.includes('ROWNUM') && run('movies', shown).rows.length === 10 && Q.grade(run('movies', sql), run('movies', shown), { ordered: true }).ok;
 });
 test('formatting preserves quoted keywords, apostrophes and whitespace', () => {
   const sql = `SELECT 'rock AND roll  OR LIMIT 10', 'O''Brien' AS "FROM here"`;
   return Q.grade(run('movies', sql), run('movies', Q.formatSQL(sql))).ok;
 });
 const mixed = { ...st, limit: 'All', filters: [{ col: 'fi_genre', op: 'equals', val: 'Drama' }, { col: 'fi_genre', op: 'equals', val: 'Sci-Fi', join: 'OR' }, { col: 'fi_rating', op: 'is at least', val: '8', join: 'AND' }] };
+test('single-table starter uses the same physical column names without aliases', () => {
+  const state = Q.exerciseState('hospital', 'names');
+  state.cols = ['pa_first', 'pa_city'];
+  state.filters = [{col:'pa_city',op:'equals',val:'Toronto'}];
+  const sql = Q.buildSQL(state).sql;
+  const result = run('hospital', sql);
+  return sql === "SELECT first_name, city FROM patient WHERE city = 'Toronto';"
+    && Q.formatSQL(sql) === "SELECT first_name, city\nFROM patient\nWHERE city = 'Toronto';"
+    && result.columns.join(',') === 'first_name,city'
+    && result.rows.length === 3;
+});
+test('single-table simplification preserves quoted data containing aliases and operators', () => {
+  const state = Q.exerciseState('hospital', 'names');
+  state.filters = [{col:'pa_city',op:'equals',val:"pa.city = O'Brien"}];
+  const sql = Q.buildSQL(state).sql;
+  return sql.includes("city = 'pa.city = O''Brien'") && run('hospital', sql).rows.length === 0;
+});
 test('mixed AND/OR conditions use SQL precedence (AND before OR)', () => Q.grade(run('movies', Q.buildSQL(mixed).sql), run('movies', "select title, rating from film where genre='Drama' OR genre='Sci-Fi' AND rating>=8 order by rating desc"), { ordered: true }).ok);
 test('LIKE exposes SQL wildcards and escapes apostrophes as data', () => {
   const col = Q.findCol('movies', ['film'], 'fi_title');

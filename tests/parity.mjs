@@ -2,7 +2,7 @@
 // Query Mirror — tests/parity.mjs
 // Proves the rewrite kept the original explorer's SQL: loads the query builder out of the ORIGINAL single-file app
 // (commit 6d58775c8a619a9c990ddd2a2f40a1b392885bee, before engine.js existed), runs it in a sandbox over every state in tests/fixtures.json, and requires
-// the new engine.buildSQL() to produce byte-identical SQL.
+// joins to retain byte-identical SQL and single-table queries to return identical ordered values.
 //
 //   git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
 //   node tests/parity.mjs /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
@@ -55,11 +55,26 @@ vm.runInContext([
 ].join('\n'), ctx);
 
 const { fixtures } = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests/fixtures.json'), 'utf8'));
+const initSqlJs = require(path.join(ROOT, 'vendor/sql-wasm.js'));
+const SQL = await initSqlJs({wasmBinary:fs.readFileSync(path.join(ROOT,'vendor/sql-wasm.wasm'))});
+const databases = Object.fromEntries(Object.entries(Q.DDL).map(([name,ddl]) => {
+  const database = new SQL.Database();
+  database.run(ddl);
+  return [name,database];
+}));
 let same = 0;
-for (const f of fixtures) {
-  const before = ctx.oldSQL(f.state), after = Q.buildSQL(f.state).sql;
-  if (before === after) same++;
-  else console.log(`DIFF ${f.id} (${f.note})\n  original: ${before}\n  engine:   ${after}`);
+for (const fixture of fixtures) {
+  const before = ctx.oldSQL(fixture.state);
+  const after = Q.buildSQL(fixture.state).sql;
+  const singleTable = Q.allTables(fixture.state.db,fixture.state.tables).length === 1;
+  const original = Q.runQuery(databases[fixture.state.db], before);
+  const current = Q.runQuery(databases[fixture.state.db], after);
+  const matching = original.columns.length === current.columns.length
+    && JSON.stringify(original.rows) === JSON.stringify(current.rows)
+    && (singleTable || before === after);
+  if (matching) same++;
+  else console.log('DIFF '+fixture.id+' original='+before+' current='+after);
 }
-console.log(`parity with the original explorer: ${same}/${fixtures.length} fixture states produce byte-identical SQL`);
+Object.values(databases).forEach(database=>database.close());
+console.log('Historical parity '+same+'/'+fixtures.length+' states preserve ordered values and column counts. Join SQL remains byte-identical.');
 process.exit(same === fixtures.length ? 0 : 1);
