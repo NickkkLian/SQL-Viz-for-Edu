@@ -382,6 +382,8 @@ hospital:{
   order:['patient','doctor','appointment'],
   tables:{
     patient:{label:'Patients',bridge:false,alias:'pa',cols:[
+      {id:'pa_first', label:'first_name', type:'text', expr:'pa.first_name', hide:true},
+      {id:'pa_last', label:'last_name', type:'text', expr:'pa.last_name', hide:true},
       {id:'pa_id',    label:'Patient ID',  type:'number',expr:'pa.patient_id',hide:true},
       {id:'pa_name',  label:'Name',        type:'text',  expr:"pa.first_name||' '||pa.last_name"},
       {id:'pa_dob',   label:'Date of Birth',type:'text', expr:'pa.dob'},

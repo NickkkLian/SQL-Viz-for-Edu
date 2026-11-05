@@ -8,7 +8,7 @@ For SQL learners and teachers: pick tables and filters, see the generated `SELEC
 
 No account, install or server. Four synthetic teaching datasets run in SQLite inside your browser.
 
-[![Query Mirror: selected tables generate a SELECT above its result rows](docs/screenshot-explore.png)](https://nickkklian.github.io/SQL-Viz-for-Edu/)
+[![Query Mirror with the Toronto selection, generated SQL and three matching rows](docs/screenshot-explore.png)](https://nickkklian.github.io/SQL-Viz-for-Edu/)
 
 ## Quick start
 
@@ -21,7 +21,9 @@ cd SQL-Viz-for-Edu
 node check.mjs
 ```
 
-Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The image above shows a configured query; the demo link opens the same dataset and table selection for you to explore.
+The opening lesson selects first names and cities for the three Toronto patients. The source preview shows the real teaching rows beside the result. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
+
+Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The screenshot shows the opening lesson. The demo link opens the Movies dataset.
 
 ## What it does
 
@@ -61,7 +63,6 @@ All four are generated for teaching: no real people, companies or patients. They
 ## How it is put together
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"darkMode": false, "fontFamily": "Inter, BlinkMacSystemFont, Segoe UI, Helvetica Neue, Helvetica, Arial", "primaryColor": "#dae7db", "mainBkg": "#dae7db", "primaryTextColor": "#1d1b24", "nodeTextColor": "#1d1b24", "textColor": "#1d1b24", "primaryBorderColor": "#2f5859", "nodeBorder": "#2f5859", "secondaryColor": "#fae8eb", "tertiaryColor": "#f7e9e8", "lineColor": "#5f7f76", "arrowheadColor": "#5f7f76", "defaultLinkColor": "#5f7f76", "edgeLabelBackground": "#fae8eb", "clusterBkg": "#f7e9e8", "clusterBorder": "#a8707a", "titleColor": "#7d2d44"}}}%%
 flowchart LR
   subgraph browser["One browser tab — no server"]
     UI["app.js<br/>controls, tables, practice UI"]
@@ -148,7 +149,7 @@ git clone https://github.com/NickkkLian/SQL-Viz-for-Edu.git
 cd SQL-Viz-for-Edu
 ```
 
-Then open `index.html` in any browser. There is no install step and no dev server: `index.html`, `engine.js`, `app.js`, the tokens and `vendor/` are the whole app. The checks need Node 20 or newer (CI runs 20 and 22).
+Then open `index.html` in any browser. There is no install step and no dev server: `index.html`, `engine.js`, `app.js`, the tokens, licensed fonts and `vendor/` are the whole app. The checks need Node 20 or newer (CI runs 20 and 22).
 
 ## Deep links
 

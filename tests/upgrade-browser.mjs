@@ -47,8 +47,9 @@ try {
   };
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('');
-  await test('first visit shows real result rows and the result-grading explanation', () => evaluate(`!!document.querySelector('#results table.data tbody tr') && document.querySelector('#grading-note').textContent.includes('missing or extra')`));
-  await test('LIMIT control shows real SQL and limits the visible result to ten rows', () => evaluate(`var e=document.querySelector('select[aria-label="Rows to show"]'); e.value='10'; e.dispatchEvent(new Event('change',{bubbles:true})); document.querySelector('#mirror pre').textContent.includes('LIMIT 10') && document.querySelectorAll('#results table.data tbody tr').length===10`));
+  await test('first visit shows real result rows and the result-grading explanation', () => evaluate(`!!document.querySelector('#results > .tablewrap table.data tbody tr') && document.querySelector('#grading-note').textContent.includes('missing or extra')`));
+  await navigate('?db=hospital&tables=patient');
+  await test('LIMIT control shows real SQL and limits the visible result to ten rows', () => evaluate(`var e=document.querySelector('select[aria-label="Rows to show"]'); e.value='10'; e.dispatchEvent(new Event('change',{bubbles:true})); document.querySelector('#mirror pre').textContent.includes('LIMIT 10') && document.querySelectorAll('#results > .tablewrap table.data tbody tr').length===10`));
   await test('condition controls expose AND/OR and LIKE', async () => {
     await evaluate(`document.querySelector('#ctl h3 button').click(); document.querySelector('#ctl h3 button').click()`);
     await evaluate(`let col=document.querySelector('select[aria-label="Column"]'); col.value='pa_name'; col.dispatchEvent(new Event('change',{bubbles:true}))`);
@@ -60,7 +61,7 @@ try {
     await evaluate(`var e=document.querySelectorAll('select[aria-label="Column"]')[1]; e.value='pa_city'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
     await evaluate(`var e=document.querySelectorAll('input[aria-label="Value"]')[1]; e.value='Toronto'; e.dispatchEvent(new Event('input',{bubbles:true}))`);
     await evaluate(`var e=document.querySelector('select[aria-label="Join condition 2"]'); e.value='OR'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
-    return evaluate(`document.querySelector('#mirror pre').textContent.includes("LIKE 'E%'") && document.querySelector('#mirror pre').textContent.includes("OR pa.city='Toronto'") && !!document.querySelector('#results table.data tbody tr') && !document.querySelector('#results [role="alert"]')`);
+    return evaluate(`document.querySelector('#mirror pre').textContent.includes("LIKE 'E%'") && document.querySelector('#mirror pre').textContent.includes("OR pa.city='Toronto'") && !!document.querySelector('#results > .tablewrap table.data tbody tr') && !document.querySelector('#results [role="alert"]')`);
   });
   await navigate('?db=hospital&exercise=names');
   await test('exercise link opens a fixed practice task with hint, hidden SQL and disabled target controls', () => evaluate(`!!document.querySelector('#editor') && !!document.querySelector('#exercise-hint') && !document.querySelector('#mirror pre') && document.querySelector('#controls').hidden && [...document.querySelectorAll('#tbl-list input')].every(e=>e.disabled)`));
@@ -89,14 +90,14 @@ try {
   await test('legacy custom practice link still opens the editor', () => evaluate(`!!document.querySelector('#editor') && !document.querySelector('#exercise-hint')`));
   await test('multiple statements and writes are rejected by the actual practice UI', () => evaluate(`document.querySelector('#editor').value='SELECT 1; DROP TABLE patient'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#practice-error').textContent.includes('one statement')`));
   await navigate('?db=hospital&tables=patient,doctor');
-  await test('hospital bridge join still produces 38 rows and 11 columns in the shipped engine', () => evaluate(`document.querySelector('#results .showing').textContent==='38 rows' && document.querySelectorAll('#results table.data thead th').length===11 && document.querySelector('#mirror pre').textContent.includes('appointment')`));
+  await test('hospital bridge join still produces 38 rows and 11 columns in the shipped engine', () => evaluate(`document.querySelector('#results .row-count').textContent==='38 rows' && document.querySelectorAll('#results > .tablewrap table.data thead th').length===11 && document.querySelector('#mirror pre').textContent.includes('appointment')`));
   await navigate('?db=university&tables=student');
   await test('grouping, AVG and HAVING can still be built by clicks', async () => {
     await evaluate(`var e=document.querySelector('select[aria-label="Group rows by"]'); e.value='st_major'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
     await evaluate(`var e=document.querySelector('select[aria-label="Aggregate for GPA"]'); e.value='AVG'; e.dispatchEvent(new Event('change',{bubbles:true}))`);
     await evaluate(`[...document.querySelectorAll('#ctl h3')].find(e=>e.textContent.includes('Only keep groups')).querySelector('button').click()`);
     await evaluate(`var e=document.querySelector('#ctl input[aria-label="Value"]'); e.value='3.4'; e.dispatchEvent(new Event('input',{bubbles:true}))`);
-    return evaluate(`document.querySelector('#mirror pre').textContent.includes('HAVING AVG(st.gpa)>3.4') && !!document.querySelector('#results table.data tbody tr')`);
+    return evaluate(`document.querySelector('#mirror pre').textContent.includes('HAVING AVG(st.gpa)>3.4') && !!document.querySelector('#results > .tablewrap table.data tbody tr')`);
   });
   await navigate('?db=ecommerce&tables=customer&mode=practice');
   await test('practice never reveals the hidden target in the query diagram', () => evaluate(`document.querySelectorAll('#query-path .erd-instance').length===0 && document.querySelector('#schema-status').textContent.includes('Run a query')`));

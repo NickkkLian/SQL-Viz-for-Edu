@@ -31,7 +31,7 @@ let failed = false;
 let state, mode, exercise;
 ({ state, mode, exercise } = Q.decodeState(location.search));
 // A first visit shows an actual result immediately; explicit legacy/deep links retain their state.
-if (!location.search) state = Q.exerciseState('hospital', 'names');
+if (!location.search) { state = Q.exerciseState('hospital', 'names'); state.cols = ['pa_first','pa_city']; state.filters = [{col:'pa_city', op:'equals', val:'Toronto'}]; }
 let lastSQL = '', lastResult = null, lastError = null, lastBuildError = null;   // lastBuildError: the controls cannot make a query (no columns); lastError: SQLite refused it
 // the loading state appears only when loading takes 300ms or more (a shorter wait shows nothing, so nothing flashes)
 let slow = false;
@@ -170,10 +170,11 @@ function updatePanels(opts) {
   syncURL();
   renderSubbar(); renderExercises(); renderTables();
   $('#controls').hidden = !!exercise;
+  $('#result-controls').hidden = mode === 'practice';
   // Value boxes call update({controls:false}): rebuilding the panel on every keystroke would replace the
   // focused <input> and drop the caret after the first character.
   if (opts.controls !== false) renderControls();
-  renderMirror(); renderResults(); renderSchema();
+  renderMirror(); renderResults(); renderSchema(); renderLesson();
 }
 function renderExercises() {
   const tasks = Q.EXERCISES[state.db];
@@ -326,6 +327,11 @@ function renderControls() {
       h('input', { class: 'ctl-inp', type: 'number', value: x.val, placeholder: 'number', 'aria-label': 'Value', oninput: e => { x.val = e.target.value; update({ controls: false }); } }),
       h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { g.having.splice(i, 1); update(); } }, '×'))) : null
   );
+  const simpleCity = state.tables.length === 1 && state.tables[0] === 'patient' && !state.group && state.filters.length <= 1 && (!state.filters.length || state.filters[0].col === 'pa_city' && state.filters[0].op === 'equals');
+  const quickCity = simpleCity ? h('div', {class:'quick-city'}, h('label', {for:'quick-city'}, 'City equals'),
+    h('select', {id:'quick-city', disabled:!!exercise, onchange:e=>{state.filters=e.target.value?[{col:'pa_city',op:'equals',val:e.target.value}]:[];update();}},
+      [...(all.find(c=>c.id==='pa_city')?.opts||[]), ''].map(city=>h('option', {value:city, selected:city===(state.filters[0]?.val||'')}, city||'Any city')))) : null;
+  fill($('#quick-controls'), quickCity || h('p', {class:'hint'}, 'Open Tables and exercises for query controls.'));
   fill(box, filters, sum);
 }
 // runPractice and the mirror's own buttons re-render only this panel, so it keeps focus the same way update() does
@@ -341,12 +347,15 @@ function renderMirrorPanel() {
   if (mode === 'practice') { renderPractice(m); return; }
   const noRows = !!lastResult && lastResult.rows.length === 0;
   fill(m, 
-    h('div', { class: 'card-head' }, h('h2', {}, 'SQL mirror'), h('span', { class: 'tag tag-neutral' }, 'SQLite'), h('span', { class: 'spacer' }),
+    h('div', { class: 'card-head' }, h('h2', {}, 'Your SQL'), h('span', { class: 'tag tag-neutral' }, 'SQLite'), h('span', { class: 'spacer' }),
       h('button', { type: 'button', class: 'btn btn-ghost btn-sm', onclick: copySQL }, 'Copy'),
-      h('button', { type: 'button', class: 'btn btn-primary btn-sm', disabled: noRows, 'aria-describedby': noRows ? 'practice-why' : null, onclick: () => setMode('practice') }, 'Practice this query')),
+      null),
     // a query with no rows makes a task any empty answer would pass, so it cannot be practised
     noRows ? h('p', { class: 'explain', id: 'practice-why' }, 'Nothing to practise — this query returns no rows. Loosen a condition first.') : null,
+    h('div', {class:'lesson-modes'}, h('button', {class:'btn selected', onclick:()=>setMode('explore')}, 'Build with clicks'), h('button', {class:'btn btn-ghost', onclick:()=>setMode('practice')}, 'Write SQL')),
     lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastBuildError || lastError || ''),
+    h('div', {class:'lesson-run'}, h('button', {class:'btn btn-primary', disabled:noRows, onclick:()=>setMode('practice')}, 'Write it yourself'), h('span', {}, 'Your choices run automatically')),
+    h('p', { class:'live-feedback'}, lastResult ? lastResult.rows.length + ' rows match your choices.' : 'Choose tables and columns.'),
     h('p', { class: 'explain' }, 'Reading: ', h('b', {}, tablesLabel()), state.limit !== 'All' ? ' · top ' + state.limit + ' rows' : '', state.sort ? ' · sorted by ' + (colById(state.sort.col) || {}).label + ' ' + (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : '')
   );
 }
@@ -492,25 +501,53 @@ function renderResultsPanel() {
         : h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { Object.assign(state, { cols: Q.defaultCols(state.db, state.tables), filters: [], group: null, sort: null, distinct: false, limit: 'All' }); update(); } }, 'Reset this query')))
     : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true })) : null;
   fill(r, 
-    h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
+    h('div', { class:'result-heading'}, h('h2', {}, 'Matching rows'), h('span', {class:'row-count'}, lastResult ? lastResult.rows.length + ' rows' : '')),
+    h('details', {class:'result-options'}, h('summary', {}, 'Result options'), h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
       h('button', { type: 'button', class: 'btn btn-sm', 'aria-pressed': String(state.distinct), disabled: !!state.group, title: state.group ? 'Grouping already collapses duplicates' : 'Hide rows identical in every column', onclick: toggleDistinct }, 'Hide duplicates'),
       sortSel, dirSel, limSel,
-      h('span', { class: 'showing' }, lastResult ? lastResult.rows.length + ' row' + (lastResult.rows.length === 1 ? '' : 's') + (state.limit !== 'All' ? ' (top ' + state.limit + ')' : '') : '')),
-    body
+      h('span', { class: 'showing' }, lastResult ? lastResult.rows.length + ' row' + (lastResult.rows.length === 1 ? '' : 's') + (state.limit !== 'All' ? ' (top ' + state.limit + ')' : '') : ''))),
+    body, renderSource()
   );
+  const resultOptions = r.querySelector('.result-options');
+  if (resultOptions) $('#result-controls').replaceChildren(resultOptions);
 }
+function renderSource() {
+  if (!ready || !state.tables.length) return null;
+  const table = state.tables[0];
+  const source = exec(state.db, table==='patient' ? 'SELECT first_name, city FROM patient' : 'SELECT * FROM "' + table + '"');
+  return h('section', {class:'source-table'}, h('div', {class:'result-heading'}, h('h3', {}, 'Source table'), h('span', {class:'row-count'}, source.rows.length + ' rows')),
+    h('div', {class:'tablewrap', tabindex:'0', role:'region', 'aria-label':'Source rows'}, resultTable(source)));
+}
+function renderLesson() {
+  const task = currentExercise();
+  $('#task-title').textContent = task ? task.title : state.db === 'hospital' && state.filters.some(f=>f.col==='pa_city' && f.val==='Toronto') ? 'Find the patients in Toronto' : 'Build a query, see its rows';
+  $('#task-subtitle').textContent = task ? task.prompt : 'Choose what to show. The SQL and matching rows update together.';
+  const index = Math.max(0, Q.EXERCISES[state.db].findIndex(t=>t.id===exercise));
+  $('#lesson-number').textContent = 'Exercise ' + (index + 1) + ' of 8';
+  fill($('#lesson-dots'), Q.EXERCISES[state.db].map((task,i)=>h('i', {class:i===index?'current':null})));
+  fill($('#column-picks'), cols().filter(c=>state.tables.length===1 && state.tables[0]==='patient' ? ['pa_first','pa_last','pa_city','pa_country'].includes(c.id) : !c.hide).map(c=>h('label', {}, h('input', {type:'checkbox', checked:state.cols.includes(c.id), disabled:!!exercise, onchange:()=>toggleCol(c.id)}), h('span', {}, c.id==='pa_city'?'city':c.id==='pa_country'?'country':c.label))));
+  const sourceRows = state.tables.reduce((n,t)=>n+(ROWCOUNT[state.db]?.[t]||0),0);
+  const count = lastResult?.rows.length || 0;
+  $('#clause-flow').hidden = mode === 'practice';
+  fill($('#clause-flow'), h('div', {}, 'FROM · ' + sourceRows + ' source rows'), h('div', {class:'flow-source', 'aria-hidden':'true'}, Array.from({length:Math.min(40,sourceRows)},()=>h('i'))),
+    h('div', {}, 'WHERE · ' + count + ' result rows'), h('div', {class:'flow-matched', 'aria-hidden':'true'}, Array.from({length:Math.min(40,count)},()=>h('i'))),
+    h('div', {}, 'SELECT · ' + (lastResult?.columns.length||0) + ' columns'), h('div', {class:'flow-columns', 'aria-hidden':'true'}, (lastResult?.columns||[]).map(()=>h('i'))),
+    h('figcaption', {}, state.group ? 'Rows are grouped before the result is returned' : 'The query narrows rows before picking columns'));
+  const practicing = mode === 'practice';
+  $('.bench').classList.toggle('practice-workspace', practicing);
+}
+$('#reference-open').addEventListener('click', () => { $('#options').open = !$('#options').open; $('#reference-open').setAttribute('aria-expanded', String($('#options').open)); });
 document.addEventListener('click', () => { if (colsOpen) { colsOpen = false; renderResults(); } });
 
 // ── theme / help ──
 Appearance.bindToggle($('#theme'));   // ◐ switches light/dark only (appearance.js)
-Appearance.bindSettings($('#nl-settings-button'), { shortcuts: '? opens help. Turn it off if you use voice control. On by default.' });   // the gear: palette, light/dark, single-key shortcuts
 // the skip link goes to the first visible heading in main, without touching the address
 document.querySelector('.skip').addEventListener('click', e => { e.preventDefault(); firstHeading().focus(); });
 function openHelp() {
   const d = $('#dlg'); fill(d, 
     h('h2', {}, 'How Query Mirror works'),
     h('p', {}, 'Tick tables, set conditions, group and sort. The mirror shows the one SELECT those clicks produce and runs it in SQLite, inside this tab. Practice mode hides the mirror and grades your own SQL by comparing result sets — column order and names are ignored, row order only matters when the task has a sort.'),
-    Appearance.shortcutsOn() ? null : h('p', {}, 'Single-key shortcuts are off — turn them on in Settings.'),
+    h('label', {class:'shortcut-setting'}, h('input', {type:'checkbox', checked:Appearance.shortcutsOn(), onchange:e=>{try{localStorage.setItem('nl-shortcuts', e.target.checked?'on':'off');}catch{}}}), 'Enable ? keyboard shortcut'),
     h('table', {}, h('tbody', {}, [['⌘/Ctrl + Enter', 'Run & check (practice)'], ['?', 'This help'], ['Esc', 'Close dialogs']].map(([k, t]) => h('tr', {}, h('td', {}, h('kbd', {}, k)), h('td', {}, t))))),
     h('p', {}, 'Share a task: “Copy task link” puts the whole state (dataset, tables, conditions, grouping, sort) in the URL with practice mode on.'),
     h('div', { class: 'acts' }, h('button', { type: 'button', class: 'btn', onclick: () => d.close() }, 'Close')));

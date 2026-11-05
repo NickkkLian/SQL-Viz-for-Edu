@@ -2,47 +2,43 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script>/* appearance boot — runs before any stylesheet so the stored palette and light/dark apply on the first paint */(function(){try{var d=document.documentElement,L=window.localStorage,t=L.getItem('nl-theme'),s=L.getItem('nl-scheme');if(s===null){var o=L.getItem('theme')||L.getItem('qm-theme');if(o==='dark'||o==='light')s=o;}if(t==='paper'||t==='ink')d.setAttribute('data-theme',t);if(s==='dark'||s==='light')d.setAttribute('data-scheme',s);}catch(e){}})();</script>
+<script>(function(){try{var s=localStorage.getItem('r3-theme')||localStorage.getItem('nl-scheme')||localStorage.getItem('qm-theme')||localStorage.getItem('theme');document.documentElement.dataset.theme=s==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Every click becomes the SQL behind it — practice is graded on results, not wording. Query Mirror is a browser-only teaching explorer over four synthetic datasets, with a practice mode that grades your own SQL against the mirror. No build, no server, nothing uploaded.">
-<meta name="theme-color" content="#f7e9e8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#130e15" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f8f7f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161724" media="(prefers-color-scheme: dark)">
 <title>Query Mirror</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500..600;1,9..144,400&family=Inter:wght@400..600&family=Space+Mono:wght@400;700&display=swap">
-<link rel="stylesheet" href="design-tokens.css?v=2.1.0">
-<link rel="stylesheet" href="app.css?v=2.1.0">
+<link rel="icon" href="favicon.svg?v=3.0.0" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.0.0">
+<link rel="stylesheet" href="fonts.css?v=3.0.0">
+<link rel="stylesheet" href="design-tokens.css?v=3.0.0">
+<link rel="stylesheet" href="app.css?v=3.0.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="topbar">
-  <a class="brand" href="./" aria-label="Query Mirror home">
-    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="19" height="19" rx="5" stroke="currentColor" stroke-width="2"/><rect x="14" y="6" width="4" height="4" rx="1" fill="var(--point)"/><path d="M6.5 9h3.5M6.5 12.5h3.5M6.5 16h3.5M12 9v7M14 12.5h3.5M14 16h3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    <b>Query Mirror</b><span>Every click becomes the SQL behind it — practice is graded on results, not wording.</span>
-  </a>
-  <span class="pill" title="Four small datasets generated for teaching — no real people or companies. Everything runs in your browser; nothing is uploaded.">Synthetic data<span class="long"> · runs in your browser</span></span>
-  <span class="spacer"></span>
-  <button class="btn btn-ghost btn-icon" id="theme" aria-label="Dark mode" aria-pressed="false" title="Dark mode"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button>
-  <button type="button" class="btn btn-ghost btn-icon" id="nl-settings-button" aria-haspopup="dialog" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10.34 5.10L10.58 2.51L13.42 2.51L13.66 5.10A7.1 7.1 0 0 1 15.71 5.95L17.71 4.28L19.72 6.29L18.05 8.29A7.1 7.1 0 0 1 18.90 10.34L21.49 10.58L21.49 13.42L18.90 13.66A7.1 7.1 0 0 1 18.05 15.71L19.72 17.71L17.71 19.72L15.71 18.05A7.1 7.1 0 0 1 13.66 18.90L13.42 21.49L10.58 21.49L10.34 18.90A7.1 7.1 0 0 1 8.29 18.05L6.29 19.72L4.28 17.71L5.95 15.71A7.1 7.1 0 0 1 5.10 13.66L2.51 13.42L2.51 10.58L5.10 10.34A7.1 7.1 0 0 1 5.95 8.29L4.28 6.29L6.29 4.28L8.29 5.95A7.1 7.1 0 0 1 10.34 5.10Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-  <a class="btn btn-ghost gh" href="https://github.com/NickkkLian/SQL-Viz-for-Edu" rel="noopener">GitHub</a>
-  <button class="btn btn-ghost btn-icon" id="help" aria-label="Help and keyboard shortcuts" title="Help (?)">?</button>
+ <a class="brand" href="./">Query Mirror</a>
+ <nav class="progress" aria-label="Exercise progress"><span id="lesson-number">Exercise 1 of 8</span><div id="lesson-dots" aria-hidden="true"></div></nav>
+ <button class="btn btn-ghost" id="reference-open" aria-label="Tables, datasets and exercises" aria-expanded="false"><span class="reference-label">Tables and exercises</span><svg class="reference-icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2"/></svg></button>
+ <button class="btn btn-ghost btn-icon" id="theme" aria-label="Switch to dark theme"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+
 </header>
-<div class="subbar" id="subbar" role="region" aria-label="Dataset and mode"></div>
+<details class="options" id="options"><summary>Datasets and exercises</summary><div class="subbar" id="subbar" role="region" aria-label="Dataset and mode"></div><section class="exercise-set" id="exercises" aria-label="Exercise set"></section>      <details id="tables"><summary>Choose tables</summary><p class="hint">Linked tables are joined for you.</p><ul class="tbl-list" id="tbl-list"></ul></details><div id="result-controls"></div><section class="card" id="controls" aria-label="Query controls"><div class="ctl" id="ctl"></div></section> <button class="btn btn-ghost btn-icon" id="help" aria-label="Help">?</button></details>
 <main class="main" id="main" tabindex="-1">
-  <h1 class="sr-only">Query Mirror</h1>
-  <p class="grading-note" id="grading-note">Graded on results: a correct answer written differently passes, and you see which rows are missing or extra.</p>
-  <section class="exercise-set" id="exercises" aria-label="Exercise set"></section>
+  <div class="task-heading"><h1 id="task-title">Find the patients in Toronto</h1><p id="task-subtitle">Choose what to show. The SQL and matching rows update together.</p></div>
+  <p class="grading-note" id="grading-note">Graded on results. Equivalent answers pass, and you see missing or extra rows.</p>
   <noscript><div class="error"><h3>JavaScript is off</h3><p>Query Mirror runs SQLite in your browser and needs JavaScript. Nothing is sent anywhere.</p></div></noscript>
   <div class="bench">
     <aside class="side">
-      <section class="card" id="tables" aria-labelledby="tables-h"><h2 id="tables-h">Tables</h2><p class="hint">Tick tables; linked tables are joined for you.</p><ul class="tbl-list" id="tbl-list"></ul></section>
-      <section class="card" id="controls" aria-labelledby="controls-h"><h2 id="controls-h">Shape the result</h2><p class="hint">Each control adds a clause to the mirror.</p><div class="ctl" id="ctl"></div></section>
+      <h2>Make a selection</h2><p class="hint">Columns to show</p><div id="column-picks" class="column-picks"></div>
+      <div id="quick-controls"></div>
+      <figure class="clause-flow" id="clause-flow"></figure>
+
     </aside>
-    <section class="stage">
-      <section class="card mirror" id="mirror" aria-live="polite"></section>
+    <section class="card mirror" id="mirror" aria-live="polite"></section>
+    <section class="card" id="results"></section>
+  </div>
+  <div class="below-workspace">
       <section class="card" id="schema-panel" aria-labelledby="schema-heading">
         <details id="schema-details" open>
           <summary id="schema-heading">Schema &amp; query path</summary>
@@ -53,8 +49,6 @@
           <details id="schema-text"><summary>Tables, columns &amp; relationships as text</summary><div id="schema-description"></div></details>
         </details>
       </section>
-      <section class="card" id="results"></section>
-    </section>
   </div>
 </main>
 <footer class="honest">
@@ -64,16 +58,16 @@
     <div><dt>Not verified here</dt>
     <dd>The engine and displayed SQL use SQLite syntax, including <code>CAST(… AS TEXT)</code> and <code>LIMIT</code>; queries are not verified against Oracle. The generator covers a teaching subset (inner and left joins along fixed keys, <code>WHERE</code> with <code>AND</code>/<code>OR</code> and <code>LIKE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>DISTINCT</code>, five aggregates); subqueries, self-joins and window functions are out of scope. Practice grading compares result sets, not SQL text. Exercise drafts and completion are saved only in this browser when storage is available; clearing site data removes them.</dd></div>
     <div><dt>Source</dt>
-    <dd><a href="https://github.com/NickkkLian/SQL-Viz-for-Edu" rel="noopener">github.com/NickkkLian/SQL-Viz-for-Edu</a> · MIT · built by Nick Lian</dd></div>
+    <dd><a href="https://github.com/NickkkLian/SQL-Viz-for-Edu" rel="noopener">github.com/NickkkLian/SQL-Viz-for-Edu</a> · MIT</dd></div>
   </dl>
 </footer>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <dialog id="dlg"></dialog>
-<script src="vendor/sql-wasm.js"></script>
-<script src="vendor/sql-wasm-b64.js"></script>
-<script src="engine.js?v=2.1.0"></script>
-<script src="schema.js"></script>
-<script src="appearance.js"></script>
-<script src="app.js?v=2.1.0"></script>
+<script src="vendor/sql-wasm.js?v=3.0.0"></script>
+<script src="vendor/sql-wasm-b64.js?v=3.0.0"></script>
+<script src="engine.js?v=3.0.0"></script>
+<script src="schema.js?v=3.0.0"></script>
+<script src="appearance.js?v=3.0.0"></script>
+<script src="app.js?v=3.0.0"></script>
 </body>
 </html>
