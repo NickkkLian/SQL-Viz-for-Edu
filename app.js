@@ -209,12 +209,16 @@ function runMirror() {
   } catch (e) { lastError = e.message; }
 }
 
+function joinPredicate(predicate) {
+  return (predicate || '').replace(/'(?:''|[^'])*'|\b[a-zA-Z_]\w*\s*\.\s*[a-zA-Z_]\w*/g, token => token.charCodeAt(0)===39 ? token : token.replace(/\s*\.\s*/g,'.'));
+}
 function renderSchema() {
   const narrow = window.matchMedia('(max-width:700px)').matches;
   const schema = schemas[state.db];
   // In practice the hidden target is never traced; edits do not replace the last run.
   const trace = ER.queryPath(tracedDB === state.db ? tracedSQL : '', schema);
   const active = new Set(trace.instances.map(t => t.table));
+  const verticalPath = narrow || trace.instances.length * 220 > $('#query-path').clientWidth;
   fill($('#schema-status'), trace.message || tracedLabel + ' · ' + trace.instances.length + ' table instances · ' + trace.joins.length + ' joins');
   const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + (t.alias === t.table ? '' : ' AS ' + t.alias) : '?'; };
   fill($('#query-path'),
@@ -222,11 +226,10 @@ function renderSchema() {
       h('span', { class: 'erd-instance' }, (i + 1) + ' · ' + instanceLabel(t.id)))) : null,
     trace.joins.length ? h('ol', { class: 'erd-joins' }, trace.joins.map(j => h('li', { class: j.matches.length ? 'erd-declared' : 'erd-unlinked' },
       h('strong', {}, j.kind.toUpperCase() + ' ' + instanceLabel(j.target)),
-      h('code', {}, j.predicate || 'No ON condition (all combinations)'),
-      h('span', {}, j.note),
-      j.pairs.map(p => h('small', {}, p.a.instance.alias + '.' + p.a.column + ' ' + p.operator.toUpperCase() + ' ' + p.b.instance.alias + '.' + p.b.column))))) : null);
+      h('code', {}, joinPredicate(j.predicate) || 'No ON condition (all combinations)'),
+      h('span', {}, j.note)))) : null);
   if (trace.instances.length) {
-    const pathGraph = h('svg', { width:narrow ? 296 : trace.instances.length * 220, height:narrow ? trace.instances.length * 120 : 100 + trace.joins.length * 26, class:'erd-svg', 'aria-hidden':'true', focusable:'false' });
+    const pathGraph = h('svg', { width:verticalPath ? 296 : trace.instances.length * 220, height:verticalPath ? trace.instances.length * 120 : 100 + trace.joins.length * 26, class:'erd-svg', 'aria-hidden':'true', focusable:'false' });
     trace.joins.forEach((join,index) => {
       const target = trace.instances.findIndex(table=>table.id===join.target);
       const sources = [...new Set(join.pairs.map(pair=>pair.a.instance.id===join.target ? pair.b.instance.id : pair.a.instance.id))];
@@ -235,24 +238,24 @@ function renderSchema() {
         const from = trace.instances.findIndex(table=>table.id===id);
         const y = 95 + index * 26;
         const gutter = 236 + index % 4 * 12;
-        const path = narrow
+        const path = verticalPath
           ? 'M108 '+(from*120+68)+' H'+gutter+' V'+(target*120+8)+' H108'
           : 'M '+(from*220+108)+' 68 V '+y+' H '+(target*220+108)+' V68';
         pathGraph.append(h('path', {d:path, class:join.matches.length ? 'erd-edge erd-active-edge' : 'erd-edge erd-query-edge'}));
-        if (!narrow) pathGraph.append(h('text', {x:(from+target)*110+108,y:y-5,'text-anchor':'middle'}, 'Join '+(index+1)+(join.matches.length ? ' · FK' : ' · no confirmed FK')));
+        if (!verticalPath) pathGraph.append(h('text', {x:(from+target)*110+108,y:y-5,'text-anchor':'middle'}, 'Join '+(index+1)+(join.matches.length ? ' · FK' : ' · no confirmed FK')));
       });
     });
     trace.instances.forEach((table,index) => {
-      const x = narrow ? 8 : index * 220 + 8;
-      const y = narrow ? index * 120 + 8 : 8;
+      const x = verticalPath ? 8 : index * 220 + 8;
+      const y = verticalPath ? index * 120 + 8 : 8;
       pathGraph.append(h('g', {class:'erd-table erd-active-table'},
-        h('rect', {x,y,width:200,height:60,rx:8}),
+        h('rect', {x,y,width:verticalPath?260:200,height:60,rx:8}),
         h('text', {x:x+12,y:y+24,class:'erd-title'}, table.table),
-        h('text', {x:x+12,y:y+46}, table.alias===table.table ? 'Source table' : narrow ? 'Alias '+(index+1) : 'AS '+table.alias)));
+        h('text', {x:x+12,y:y+46}, table.alias===table.table ? 'Source table' : 'AS '+table.alias)));
     });
     $('#query-path').prepend(h('div', {class:'erd-scroll',tabindex:'0',role:'region','aria-label':'Query join diagram. Each numbered alias is named in full below.'},pathGraph));
   }
-  const across = narrow ? 1 : 3;
+  const across = narrow ? 1 : Math.max(1,Math.min(3,Math.floor(($('#schema-graph').clientWidth-24)/310)));
   const positions = new Map(schema.tables.map((table,index)=>[table.name,{x:narrow?16:32+(index%across)*310,y:32+Math.floor(index/across)*340}]));
   const width = narrow ? 296 : Math.min(across,schema.tables.length)*310+24;
   const height = Math.ceil(schema.tables.length/across)*340;
@@ -324,7 +327,7 @@ function renderControls() {
         row.append(inp);
         if (col.opts && !document.getElementById('dl-' + col.id)) document.body.append(h('datalist', { id: 'dl-' + col.id }, col.opts.map(o => h('option', { value: o }))));
       }
-      row.append(h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { state.filters.splice(i, 1); update(); } }, '×'));
+      row.append(h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { state.filters.splice(i, 1); update(); } }, 'Remove'));
       return [i ? sel([{ v: 'AND', t: 'AND · both must match' }, { v: 'OR', t: 'OR · either can match' }], f.join || 'AND', v => { f.join = v; update(); }, { 'aria-label': 'Join condition ' + (i + 1) }) : null,
         row, f.op === 'LIKE' ? h('p', { class: 'none' }, '% matches any text; _ matches one character.') : null];
     }) : h('p', { class: 'none' }, 'No conditions — every row passes.'),
@@ -343,7 +346,7 @@ function renderControls() {
       sel(Object.entries(g.aggs).map(([cid, fn]) => ({ v: cid + '|' + fn, t: Q.AGG_LABELS[fn] + ' of ' + (colById(cid) || {}).label })), x.aggCol, v => { x.aggCol = v; update(); }, { 'aria-label': 'Aggregate' }),
       sel(Q.HAV_OPS.map(o => ({ v: o.label, t: o.label })), x.op, v => { x.op = v; update(); }, { 'aria-label': 'Condition' }),
       h('input', { class: 'ctl-inp', type: 'number', value: x.val, placeholder: 'number', 'aria-label': 'Value', oninput: e => { x.val = e.target.value; update({ controls: false }); } }),
-      h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { g.having.splice(i, 1); update(); } }, '×'))) : null
+      h('button', { type: 'button', class: 'icon-del', 'aria-label': 'Remove condition', onclick: () => { g.having.splice(i, 1); update(); } }, 'Remove'))) : null
   );
   const simpleCity = state.tables.length === 1 && state.tables[0] === 'patient' && !state.group && state.filters.length <= 1 && (!state.filters.length || state.filters[0].col === 'pa_city' && state.filters[0].op === 'equals');
   const quickCity = simpleCity ? h('div', {class:'quick-city'}, h('label', {for:'quick-city'}, 'City equals'),
@@ -353,7 +356,7 @@ function renderControls() {
   fill(box, filters, sum);
 }
 // runPractice and the mirror's own buttons re-render only this panel, so it keeps focus the same way update() does
-function renderMirror() { const find = focusKey(document.activeElement); renderMirrorPanel(); restoreFocus(find); }
+function renderMirror() { const find = focusKey(document.activeElement); renderMirrorPanel(); fitTables(); restoreFocus(find); }
 function renderMirrorPanel() {
   const m = $('#mirror');
   if (!state.tables.length) {
@@ -472,12 +475,16 @@ function shareTask() {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(() => toast('Task link copied — it opens straight in practice mode'), () => toast('Copy failed: ' + url, { alert: true, ms: 6000 }));
   else toast(url, { ms: 6000 });
 }
+function columnName(label) {
+  if (!label.includes('||')) return label;
+  return h('span', {class:'expression-name'}, label.split('||').map((part,index) => h('span', {}, (index ? '||' : '') + part)));
+}
 function cellNode(value, label) {
   const numeric = typeof value === 'number';
   const missing = value === null || value === undefined;
   const text = missing ? '—' : numeric && !Number.isInteger(value) ? String(Number(value.toFixed(4))) : String(value);
   return h('td', { class: numeric ? 'num' : null, title: numeric && !Number.isInteger(value) ? String(value) : null },
-    h('span', {class:'cell-label'}, label),
+    h('span', {class:'cell-label'}, columnName(label)),
     h('span', {class:'cell-value'}, missing ? h('span', {class:'null'}, text) : text));
 }
 function resultTable(res, opts = {}) {
@@ -488,21 +495,21 @@ function resultTable(res, opts = {}) {
   const numeric = res.columns.map((_, j) => { const vals = res.rows.map(r => r[j]).filter(v => v !== null && v !== undefined); return vals.length > 0 && vals.every(v => typeof v === 'number'); });
   return h('table', { class: 'data' + (opts.compact ? ' compact' : ''), 'data-layout':res.columns.length + (opts.rowNumbers ? 1 : 0) > 3 ? 'records' : 'columns' },
     h('thead', {}, h('tr', {}, opts.rowNumbers ? h('th', {scope:'col', 'data-row-number':true}, 'Row') : null, res.columns.map((c, j) => {
-      if (!opts.sortable) return h('th', { scope: 'col', class: numeric[j] ? 'num' : null }, c);
+      if (!opts.sortable) return h('th', { scope: 'col', class: numeric[j] ? 'num' : null }, columnName(c));
       const col = cols().find(x => x.label === c || x.expr.replace(/\b[a-z]+\./g, '') === c);
       const active = col && state.sort && state.sort.col === col.id;
       return h('th', { scope: 'col', class: numeric[j] ? 'num' : null, 'aria-sort': active ? (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : null },
-        col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, c) : c);
+        col ? h('button', { type: 'button', onclick: () => clickSort(col.id), title: 'Sort by ' + c }, columnName(c)) : columnName(c));
     }))),
     h('tbody', {}, rows.length ? rows.map((r, i) => h('tr', { class: miss.has(i) ? 'miss' : (extra.has(i) ? 'extra' : null) }, opts.rowNumbers ? h('td', {'data-row-number':true}, h('span', {class:'cell-label'}, 'Row'), h('span', {class:'cell-value'}, i + 1)) : null, r.map((value,index) => cellNode(value,res.columns[index]))))
       : h('tr', {}, h('td', { class: 'empty-row', colspan: res.columns.length + (opts.rowNumbers ? 1 : 0) || 1 }, opts.empty ? opts.empty : [h('b', {}, 'No rows match'), ' — loosen a condition above',
           opts.sortable && state.filters.length ? [', or ', h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { state.filters = []; update(); } }, 'Remove all conditions')] : '.']))),
-    res.rows.length > limit ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
+    res.rows.length > limit && opts.more !== false ? h('tfoot', {}, h('tr', {}, h('td', { colspan: res.columns.length, class: 'faint', style: 'font-size:var(--text-2xs)' }, '+ ' + (res.rows.length - limit) + ' more rows'))) : null);
 }
 let colsOpen = false;
 // the Columns button, its checkboxes and the header buttons are rebuilt on every change: keep focus on the same control
 // (Enter on Columns, or Space on a checkbox, left focus on <body>; 2026-09-16)
-function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); restoreFocus(find); }
+function renderResults() { const find = focusKey(document.activeElement); renderResultsPanel(); fitTables(); restoreFocus(find); }
 function renderResultsPanel() {
   const r = $('#results');
   const optionsOpen = $('#result-controls .result-options')?.open || false;
@@ -540,12 +547,14 @@ function renderResultsPanel() {
   const resultOptions = r.querySelector('.result-options');
   if (resultOptions) $('#result-controls').replaceChildren(resultOptions);
 }
+let sourceExpanded = false;
 function renderSource() {
   if (!ready || !state.tables.length) return null;
   const table = state.tables[0];
   const source = exec(state.db, table==='patient' ? 'SELECT first_name, city FROM patient' : 'SELECT * FROM "' + table + '"');
   return h('section', {class:'source-table'}, h('div', {class:'result-heading'}, h('h3', {}, 'Source table'), h('span', {class:'row-count'}, source.rows.length + ' rows')),
-    h('div', {class:'tablewrap', tabindex:'0', role:'region', 'aria-label':'Source rows'}, resultTable(source)));
+    h('div', {class:'tablewrap', tabindex:'0', role:'region', 'aria-label':'Source rows'}, resultTable(source,{limit:sourceExpanded?Infinity:4,more:false})),
+    source.rows.length>4 ? h('button',{id:'source-more',class:'btn btn-ghost btn-sm','aria-expanded':String(sourceExpanded),onclick:()=>{sourceExpanded=!sourceExpanded;renderResults();}},sourceExpanded?'Show four source rows':'Show all '+source.rows.length+' source rows') : null);
 }
 function renderLesson() {
   const task = currentExercise();
@@ -566,6 +575,7 @@ function renderLesson() {
     h('figcaption', {}, state.group ? 'Rows are grouped before the result is returned' : 'The query narrows rows before picking columns'));
   const practicing = mode === 'practice';
   $('.bench').classList.toggle('practice-workspace', practicing);
+  fitTables();
 }
 const options = $('#options');
 const optionsButton = $('#reference-open');
@@ -643,5 +653,20 @@ function engineFailed() {
   return h('div', { class: 'error', role: 'alert' }, h('h3', {}, 'SQLite could not start'), h('p', { class: 'muted', style: 'font-size:var(--text-xs)' }, 'The SQL engine ships inside this folder (vendor/) and did not load in this browser. Reload; if it persists, the files were served incompletely.'),
     h('div', {}, h('button', { type: 'button', class: 'btn btn-sm', onclick: () => location.reload() }, 'Reload')));
 }
+
+function fitTables() {
+  for (const table of document.querySelectorAll('table[data-layout]')) {
+    if (!table.checkVisibility()) continue;
+    table.classList.remove('as-records');
+    const region = table.closest('.tablewrap') || table.parentElement;
+    const phoneRecords = innerWidth<=700 && table.dataset.layout==='records';
+    table.classList.toggle('as-records',phoneRecords || table.scrollWidth>region.clientWidth+1);
+  }
+}
+window.addEventListener('resize', () => {
+  const find=focusKey(document.activeElement);
+  fitTables(); renderSchema(); fitEditor($('#editor')); restoreFocus(find);
+});
+
 boot();
 })();

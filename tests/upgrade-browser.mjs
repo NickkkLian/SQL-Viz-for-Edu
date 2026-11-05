@@ -109,6 +109,7 @@ try {
     fs.mkdirSync(erdShots, { recursive: true });
     for (const width of [1440, 390]) {
       await cdp('Emulation.setDeviceMetricsOverride', { width, height: width===1440?1100:844, deviceScaleFactor: 1, mobile: false });
+      await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
       await evaluate(`document.querySelector('#schema-panel').scrollIntoView({block:'start'})`);
       await test(name + ' ' + width + 'px: diagram fits on phones and keeps keyboard regions', () => evaluate(`document.documentElement.scrollWidth<=innerWidth && [...document.querySelectorAll('#schema-panel .erd-scroll')].every(e=>e.tabIndex===0) && (innerWidth>600 || document.querySelector('#schema-graph').scrollWidth<=document.querySelector('#schema-graph').clientWidth)`));
       const shot = await cdp('Page.captureScreenshot', { format: 'png' });

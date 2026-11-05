@@ -21,7 +21,7 @@ cd SQL-Viz-for-Edu
 node check.mjs
 ```
 
-The opening lesson generates SELECT first_name, city FROM patient WHERE city = 'Toronto'; and uses those column names in the chips and both tables. Matching rows includes row numbers and a Live preview status. The source preview shows the real teaching rows beside the result. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
+The opening lesson generates SELECT first_name, city FROM patient WHERE city = 'Toronto'; and uses those column names in the chips and both tables. Matching rows includes row numbers and a Live preview status. The source preview shows four real teaching rows beside the result; Show all source rows reveals the rest. Wide tables become labeled records when their columns do not fit, at every viewport width. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
 
 Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The screenshot shows the opening lesson. The demo link opens the Movies dataset.
 

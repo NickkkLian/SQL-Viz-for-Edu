@@ -646,3 +646,85 @@ table.compact th,table.compact td { height:40px; }
 @media(max-width:700px) {
   table[data-layout=records] thead th[aria-sort] button { background:var(--accent); color:var(--on-accent); }
 }
+
+
+/* Review: content determines card height, and controls never sit under a popover. */
+.practice-workspace { min-height:0; }
+.cols:has(.menu) { flex:1 1 100%; }
+.cols .menu { position:static; width:max-content; max-width:100%; min-width:0; max-height:none; overflow:visible; margin-top:12px; }
+.ctl h3 { justify-content:flex-start; gap:16px; flex-wrap:wrap; }
+.ctl h3 .btn { margin-left:0; }
+.icon-del { width:auto; height:auto; min-height:32px; padding:4px 8px; font:700 12px/1.5 var(--body); }
+#help { width:auto; padding:8px 12px; }
+.tablewrap,.source-table .tablewrap,.erd-scroll { overflow:visible; max-height:none!important; }
+table.as-records { width:100%; max-width:100%; min-width:0!important; table-layout:fixed; }
+table.as-records th,table.as-records td { white-space:normal; overflow:visible; overflow-wrap:anywhere; max-width:none; }
+table.as-records thead th { position:static; }
+.expression-name { display:inline-flex; flex-wrap:wrap; gap:0 4px; text-align:left; }
+.expression-name > span { white-space:pre; overflow-wrap:normal; word-break:normal; }
+.expected-preview:has(table.as-records) { width:min(480px,100%); }
+  table.as-records,table.as-records tbody { display:block; }
+  table.as-records thead { display:block; margin-bottom:12px; }
+  table.as-records thead tr { display:flex; flex-wrap:wrap; gap:8px; }
+  table.as-records thead th { display:block; height:auto; padding:0; background:transparent; border:0; }
+  table.as-records thead th:not(:has(button)) { display:none; }
+  table.as-records thead th button {
+    display:inline-flex;
+    box-sizing:border-box;
+    padding:8px 12px;
+    height:auto;
+    min-height:36px;
+    background:var(--soft);
+    border-radius:999px;
+    font-size:12px;
+    white-space:normal;
+    text-align:left;
+  }
+  table.as-records thead th.num button { width:auto; justify-content:flex-start; }
+  table.as-records tbody tr {
+    display:block;
+    padding:12px;
+    margin-bottom:12px;
+    border-radius:10px;
+    background:var(--soft);
+  }
+  table.as-records tbody td,table.as-records tbody td.num {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);
+    align-items:start;
+    gap:8px 12px;
+    height:auto;
+    min-height:32px;
+    padding:8px 0;
+    border:0;
+    text-align:left;
+  }
+  table.as-records .cell-label {
+    display:block;
+    font:700 12px/1.5 var(--body);
+    color:var(--muted);
+    overflow-wrap:anywhere;
+  }
+  table.as-records .cell-value {
+    display:block;
+    font-size:14px;
+    line-height:1.5;
+    overflow-wrap:anywhere;
+  }
+table.as-records thead th[aria-sort] button { background:var(--accent); color:var(--on-accent); }
+
+.options[open] { width:min(calc(100% - 64px),840px); margin-left:32px; }
+.cols .menu { width:100%; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px 16px; padding:16px; }
+.cols .menu .sect { grid-column:1/-1; margin:0; }
+.cols .menu label { min-height:32px; }
+.ctl .row { grid-template-columns:minmax(0,1fr) minmax(0,1fr) max-content; }
+.ctl .row .icon-del { justify-self:start; }
+table.as-records td.empty-row { display:block; }
+@media(max-width:700px) {
+ .options[open] { width:calc(100% - 32px); margin-left:16px; }
+ .ctl .row,#options .ctl .row.two { grid-template-columns:minmax(0,1fr); }
+}
+
+table.data thead th { position:static; }
+
+.bench { min-height:0; }

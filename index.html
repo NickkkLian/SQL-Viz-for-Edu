@@ -8,11 +8,11 @@
 <meta name="theme-color" content="#f8f7f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#161724" media="(prefers-color-scheme: dark)">
 <title>Query Mirror</title>
-<link rel="icon" href="favicon.svg?v=3.1.0" type="image/svg+xml">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.1.0">
-<link rel="stylesheet" href="fonts.css?v=3.1.0">
-<link rel="stylesheet" href="design-tokens.css?v=3.1.0">
-<link rel="stylesheet" href="app.css?v=3.1.0">
+<link rel="icon" href="favicon.svg?v=3.2.0" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.2.0">
+<link rel="stylesheet" href="fonts.css?v=3.2.0">
+<link rel="stylesheet" href="design-tokens.css?v=3.2.0">
+<link rel="stylesheet" href="app.css?v=3.2.0">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -23,7 +23,7 @@
  <button class="btn btn-ghost btn-icon" id="theme" aria-label="Switch to dark theme"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
 
 </header>
-<details class="options" id="options"><summary>Datasets and exercises</summary><div class="subbar" id="subbar" role="region" aria-label="Dataset and mode"></div><section class="exercise-set" id="exercises" aria-label="Exercise set"></section>      <details id="tables"><summary>Choose tables</summary><p class="hint">Linked tables are joined for you.</p><ul class="tbl-list" id="tbl-list"></ul></details><div id="result-controls"></div><section class="card" id="controls" aria-label="Query controls"><div class="ctl" id="ctl"></div></section> <button class="btn btn-ghost btn-icon" id="help" aria-label="Help">?</button></details>
+<details class="options" id="options"><summary>Datasets and exercises</summary><div class="subbar" id="subbar" role="region" aria-label="Dataset and mode"></div><section class="exercise-set" id="exercises" aria-label="Exercise set"></section>      <details id="tables"><summary>Choose tables</summary><p class="hint">Linked tables are joined for you.</p><ul class="tbl-list" id="tbl-list"></ul></details><div id="result-controls"></div><section class="card" id="controls" aria-label="Query controls"><div class="ctl" id="ctl"></div></section> <button class="btn btn-ghost btn-icon" id="help" aria-label="Help">Help</button></details>
 <main class="main" id="main" tabindex="-1">
   <div class="task-heading"><h1 id="task-title">Find the patients in Toronto</h1><p id="task-subtitle">Choose what to show. The SQL and matching rows update together.</p></div>
   <p class="grading-note" id="grading-note">Graded on results. Equivalent answers pass, and you see missing or extra rows.</p>
@@ -43,7 +43,7 @@
       <section class="card" id="schema-panel" aria-labelledby="schema-heading">
         <details id="schema-details" open>
           <summary id="schema-heading">Schema &amp; query path</summary>
-          <p class="hint">PK = primary key · FK = foreign key. Solid lines are declared relationships; dashed lines are joins without a confirmed foreign key. Highlighted tables and lines belong to the last executed query. Scroll either diagram to explore, or open the text version below.</p>
+          <p class="hint">PK = primary key · FK = foreign key. Solid lines are declared relationships; dashed lines are joins without a confirmed foreign key. Highlighted tables and lines belong to the last executed query. The diagrams fit the available width. Open the text version below for the same relationships.</p>
           <p id="schema-status" role="status"></p>
           <div id="query-path"></div>
           <div id="schema-graph" class="erd-scroll" tabindex="0" role="region" aria-label="Schema diagram, scroll to explore"></div>
@@ -66,11 +66,11 @@
 </details>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <dialog id="dlg"></dialog>
-<script src="vendor/sql-wasm.js?v=3.1.0"></script>
-<script src="vendor/sql-wasm-b64.js?v=3.1.0"></script>
-<script src="engine.js?v=3.1.0"></script>
-<script src="schema.js?v=3.1.0"></script>
-<script src="appearance.js?v=3.1.0"></script>
-<script src="app.js?v=3.1.0"></script>
+<script src="vendor/sql-wasm.js?v=3.2.0"></script>
+<script src="vendor/sql-wasm-b64.js?v=3.2.0"></script>
+<script src="engine.js?v=3.2.0"></script>
+<script src="schema.js?v=3.2.0"></script>
+<script src="appearance.js?v=3.2.0"></script>
+<script src="app.js?v=3.2.0"></script>
 </body>
 </html>
