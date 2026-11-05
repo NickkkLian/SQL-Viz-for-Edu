@@ -214,11 +214,12 @@ function joinPredicate(predicate) {
 }
 function renderSchema() {
   const narrow = window.matchMedia('(max-width:700px)').matches;
+  const scale = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
   const schema = schemas[state.db];
   // In practice the hidden target is never traced; edits do not replace the last run.
   const trace = ER.queryPath(tracedDB === state.db ? tracedSQL : '', schema);
   const active = new Set(trace.instances.map(t => t.table));
-  const verticalPath = narrow || trace.instances.length * 220 > $('#query-path').clientWidth;
+  const verticalPath = narrow || trace.instances.length * 220 > $('#query-path').clientWidth / scale;
   fill($('#schema-status'), trace.message || tracedLabel + ' · ' + trace.instances.length + ' table instances · ' + trace.joins.length + ' joins');
   const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + (t.alias === t.table ? '' : ' AS ' + t.alias) : '?'; };
   fill($('#query-path'),
@@ -229,7 +230,9 @@ function renderSchema() {
       h('code', {}, joinPredicate(j.predicate) || 'No ON condition (all combinations)'),
       h('span', {}, j.note)))) : null);
   if (trace.instances.length) {
-    const pathGraph = h('svg', { width:verticalPath ? 296 : trace.instances.length * 220, height:verticalPath ? trace.instances.length * 120 : 100 + trace.joins.length * 26, class:'erd-svg', 'aria-hidden':'true', focusable:'false' });
+    const pathWidth = verticalPath ? 296 : trace.instances.length * 220;
+    const pathHeight = verticalPath ? trace.instances.length * 120 : 100 + trace.joins.length * 26;
+    const pathGraph = h('svg', { width:pathWidth * scale, height:pathHeight * scale, viewBox:`0 0 ${pathWidth} ${pathHeight}`, class:'erd-svg', 'aria-hidden':'true', focusable:'false' });
     trace.joins.forEach((join,index) => {
       const target = trace.instances.findIndex(table=>table.id===join.target);
       const sources = [...new Set(join.pairs.map(pair=>pair.a.instance.id===join.target ? pair.b.instance.id : pair.a.instance.id))];
@@ -255,11 +258,11 @@ function renderSchema() {
     });
     $('#query-path').prepend(h('div', {class:'erd-scroll',tabindex:'0',role:'region','aria-label':'Query join diagram. Each numbered alias is named in full below.'},pathGraph));
   }
-  const across = narrow ? 1 : Math.max(1,Math.min(3,Math.floor(($('#schema-graph').clientWidth-24)/310)));
+  const across = narrow ? 1 : Math.max(1,Math.min(3,Math.floor(($('#schema-graph').clientWidth / scale-24)/310)));
   const positions = new Map(schema.tables.map((table,index)=>[table.name,{x:narrow?16:32+(index%across)*310,y:32+Math.floor(index/across)*340}]));
   const width = narrow ? 296 : Math.min(across,schema.tables.length)*310+24;
   const height = Math.ceil(schema.tables.length/across)*340;
-  const graph = h('svg', { width, height, viewBox: '0 0 ' + width + ' ' + height, 'aria-hidden': 'true', focusable: 'false', class: 'erd-svg' });
+  const graph = h('svg', { width:width * scale, height:height * scale, viewBox: '0 0 ' + width + ' ' + height, 'aria-hidden': 'true', focusable: 'false', class: 'erd-svg' });
   for (const fk of schema.foreignKeys) {
     const a = positions.get(fk.from), b = positions.get(fk.to);
     const y1 = a.y + 58 + schema.tables.find(t => t.name === fk.from).columns.findIndex(c => c.name === fk.columns[0]) * 25;
@@ -303,7 +306,7 @@ function renderTables() {
         h('span', {}, sc.tables[t].label), h('span', { class: 'cnt' }, (ROWCOUNT[state.db] && ROWCOUNT[state.db][t] != null ? ROWCOUNT[state.db][t] : '…') + ' rows')));
     }),
     bridges.length ? h('li', {}, h('div', { class: 'sect' }, 'Joined automatically')) : null,
-    bridges.map(t => h('li', {}, h('div', { class: 'bridge', style: 'display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--space-2);align-items:center;height:32px;padding:0 var(--space-2);font-size:var(--text-sm)' },
+    bridges.map(t => h('li', {}, h('div', { class: 'bridge', style: 'display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--space-2);align-items:center;height:calc(32 * var(--suite-px, 1px));padding:0 var(--space-2);font-size:var(--text-sm)' },
       h('span', { class: 'ico' }, h('svg', { viewBox: '0 0 16 16', width: 14, height: 14, fill: 'none', 'aria-hidden': 'true' }, h('path', { d: 'M6 10l4-4M5 7a2.5 2.5 0 0 0-3.5 3.5l1 1A2.5 2.5 0 0 0 6 11M10 9a2.5 2.5 0 0 0 3.5-3.5l-1-1A2.5 2.5 0 0 0 10 5', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round' }))),
       h('span', {}, sc.tables[t].label), h('span', { class: 'tag tag-info' }, 'link'))))
   );
@@ -424,13 +427,13 @@ function renderPractice(m) {
         h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'Counterexample: when ' + practice.variant.variant.label),
         h('div', { class: 'legend', style: 'margin-bottom:var(--space-2)' }, h('span', { class: 'm' }, h('i'), 'expected but missing from yours'), h('span', { class: 'x' }, h('i'), 'in yours but not expected')),
         h('div', { class: 'diff' },
-          h('div', {}, h('h3', {}, 'Expected on this data'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Expected on the counterexample data' }, resultTable(practice.variant.expected, { compact: true, mark: { miss: practice.variant.verdict.missing }, empty: 'No rows expected.' }))),
-          practice.variant.actual ? h('div', {}, h('h3', {}, 'Yours on this data'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result on the counterexample data' }, resultTable(practice.variant.actual, { compact: true, mark: { extra: practice.variant.verdict.extra }, empty: 'Your query returned no rows.' }))) : null)) : null,
+          h('div', {}, h('h3', {}, 'Expected on this data'), h('div', { class: 'tablewrap', style: 'max-height:calc(280 * var(--suite-px, 1px))', tabindex: '0', role: 'region', 'aria-label': 'Expected on the counterexample data' }, resultTable(practice.variant.expected, { compact: true, mark: { miss: practice.variant.verdict.missing }, empty: 'No rows expected.' }))),
+          practice.variant.actual ? h('div', {}, h('h3', {}, 'Yours on this data'), h('div', { class: 'tablewrap', style: 'max-height:calc(280 * var(--suite-px, 1px))', tabindex: '0', role: 'region', 'aria-label': 'Your result on the counterexample data' }, resultTable(practice.variant.actual, { compact: true, mark: { extra: practice.variant.verdict.extra }, empty: 'Your query returned no rows.' }))) : null)) : null,
       v && !v.ok && !v.variantFail && practice.result ? h('div', {},
         h('div', { class: 'legend', style: 'margin-bottom:var(--space-2)' }, h('span', { class: 'm' }, h('i'), 'expected but missing from yours'), h('span', { class: 'x' }, h('i'), 'in yours but not expected')),
-        h('div', { class: 'diff' }, h('div', {}, h('h3', {}, 'Your result (' + practice.result.rows.length + ' row' + (practice.result.rows.length === 1 ? '' : 's') + ')'), h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, mark: { extra: v.extra }, empty: 'Your query returned no rows.' }))))) : null,
-      v && v.ok && practice.result ? h('div', { class: 'tablewrap', style: 'max-height:280px', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, empty: 'Your query returned no rows.' })) : null,
-      practice.revealed && lastSQL ? h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'The mirror'), h('pre', { class: 'mono', style: 'margin:0;padding:var(--space-3) var(--space-4);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);font-size:var(--text-sm);line-height:1.7;overflow-x:auto', html: highlightSQL(Q.formatSQL(lastSQL)) })) : null
+        h('div', { class: 'diff' }, h('div', {}, h('h3', {}, 'Your result (' + practice.result.rows.length + ' row' + (practice.result.rows.length === 1 ? '' : 's') + ')'), h('div', { class: 'tablewrap', style: 'max-height:calc(280 * var(--suite-px, 1px))', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, mark: { extra: v.extra }, empty: 'Your query returned no rows.' }))))) : null,
+      v && v.ok && practice.result ? h('div', { class: 'tablewrap', style: 'max-height:calc(280 * var(--suite-px, 1px))', tabindex: '0', role: 'region', 'aria-label': 'Your result' }, resultTable(practice.result, { compact: true, empty: 'Your query returned no rows.' })) : null,
+      practice.revealed && lastSQL ? h('div', {}, h('h3', { style: 'font-size:var(--text-xs);font-weight:var(--weight-medium);color:var(--text-2);margin-bottom:var(--space-1)' }, 'The mirror'), h('pre', { class: 'mono', style: 'margin:0;padding:var(--space-3) var(--space-4);border:calc(1 * var(--suite-px, 1px)) solid var(--border);border-radius:var(--radius-sm);background:var(--surface-2);font-size:var(--text-sm);line-height:1.7;overflow-x:auto', html: highlightSQL(Q.formatSQL(lastSQL)) })) : null
     )
   );
   fitEditor(editor);
