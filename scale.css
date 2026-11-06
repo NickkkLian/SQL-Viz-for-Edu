@@ -3,8 +3,6 @@
 html[data-suite-scale="fluid"] { --suite-px: calc(var(--suite-screen-unit) / 16); font-size: var(--suite-screen-unit); }
 @media (min-width:1230px) { body { max-width:calc(1215 * var(--suite-px, 1px)); margin-inline:auto; } }
 .grading-note { width: 1px; height: 1px; }
-/* Diagram coordinates use a fixed viewBox; the SVG scales their text with it. */
-.erd-svg { font-size: 12px; }
 .topbar svg[width="20"] { width: calc(20 * var(--suite-px)); height: calc(20 * var(--suite-px)); }
 .topbar svg[width="18"] { width: calc(18 * var(--suite-px)); height: calc(18 * var(--suite-px)); }
 .bridge .ico svg { width: calc(14 * var(--suite-px)); height: calc(14 * var(--suite-px)); }

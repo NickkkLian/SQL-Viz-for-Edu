@@ -212,6 +212,14 @@ function runMirror() {
 function joinPredicate(predicate) {
   return (predicate || '').replace(/'(?:''|[^'])*'|\b[a-zA-Z_]\w*\s*\.\s*[a-zA-Z_]\w*/g, token => token.charCodeAt(0)===39 ? token : token.replace(/\s*\.\s*/g,'.'));
 }
+// The viewBox already scales the diagram. Counter that scale for each text
+// anchor so its fluid CSS font size is not applied a second time visually.
+function normalizeDiagramText(svg, scale) {
+  for (const text of svg.querySelectorAll('text')) {
+    const x = Number(text.getAttribute('x')), y = Number(text.getAttribute('y'));
+    text.setAttribute('transform', `translate(${x} ${y}) scale(${1 / scale}) translate(${-x} ${-y})`);
+  }
+}
 function renderSchema() {
   const narrow = window.matchMedia('(max-width:700px)').matches;
   const scale = parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
@@ -256,6 +264,7 @@ function renderSchema() {
         h('text', {x:x+12,y:y+24,class:'erd-title'}, table.table),
         h('text', {x:x+12,y:y+46}, table.alias===table.table ? 'Source table' : 'AS '+table.alias)));
     });
+    normalizeDiagramText(pathGraph, scale);
     $('#query-path').prepend(h('div', {class:'erd-scroll',tabindex:'0',role:'region','aria-label':'Query join diagram. Each numbered alias is named in full below.'},pathGraph));
   }
   const across = narrow ? 1 : Math.max(1,Math.min(3,Math.floor(($('#schema-graph').clientWidth / scale-24)/310)));
@@ -280,6 +289,7 @@ function renderSchema() {
       t.columns.map((c, i) => h('text', { x: x + 12, y: y + 62 + i * 25 },
         (t.primaryKey.includes(c.name) ? 'PK ' : '') + (schema.foreignKeys.some(f => f.from === t.name && f.columns.includes(c.name)) ? 'FK ' : '') + c.name + ' · ' + c.type))));
   }
+  normalizeDiagramText(graph, scale);
   fill($('#schema-graph'), graph);
   fill($('#schema-description'), schema.tables.map(t => h('div', {}, h('h3', {}, t.name + (active.has(t.name) ? ' · in query' : '')),
     h('ul', {}, t.columns.map(c => h('li', {}, c.name + ' · ' + c.type + (t.primaryKey.includes(c.name) ? ' · primary key' : '')))))),
