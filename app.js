@@ -299,10 +299,10 @@ function renderSchema() {
 }
 function renderSubbar() {
   const sb = $('#subbar'); fill(sb, 
-    h('span', { class: 'seg-label' }, 'Dataset'),
-    h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Dataset' }, Object.keys(Q.SCHEMA).map(db => h('button', { type: 'button', role: 'radio', 'aria-checked': String(db === state.db), onclick: () => setDB(db) }, DB_LABEL[db]))),
-    h('span', { class: 'seg-label' }, 'Mode'),
-    h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Mode' }, [['explore', 'Explore'], ['practice', 'Practice']].map(([m, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mode), onclick: () => setMode(m) }, l))),
+    h('div', {class:'seg-group'}, h('span', { class: 'seg-label' }, 'Dataset'),
+      h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Dataset' }, Object.keys(Q.SCHEMA).map(db => h('button', { type: 'button', role: 'radio', 'aria-checked': String(db === state.db), onclick: () => setDB(db) }, DB_LABEL[db])))),
+    h('div', {class:'seg-group'}, h('span', { class: 'seg-label' }, 'Mode'),
+      h('div', { class: 'seg', role: 'radiogroup', 'aria-label': 'Mode' }, [['explore', 'Explore'], ['practice', 'Practice']].map(([m, l]) => h('button', { type: 'button', role: 'radio', 'aria-checked': String(m === mode), onclick: () => setMode(m) }, l)))),
     h('span', { class: 'status ' + (ready ? 'ok' : failed ? 'err' : slow ? 'busy' : 'wait'), id: 'status' }, ready || failed || slow ? h('i') : null, ready ? 'SQLite ready · ' + Object.keys(Q.SCHEMA).length + ' datasets in memory' : failed ? 'SQLite failed to load' : slow ? 'Loading SQLite…' : '')
   );
 }

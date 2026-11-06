@@ -728,16 +728,18 @@ table.as-records td.empty-row { display:block; }
 table.data thead th { position:static; }
 
 @media (min-width:701px) {
- .options-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:'dataset result' 'exercises controls' 'tables controls' 'help controls'; gap:0 calc(32 * var(--suite-px, 1px)); align-items:start; }
- .options-layout #subbar { grid-area:dataset; }
- .options-layout #exercises { grid-area:exercises; }
- .options-layout #tables { grid-area:tables; }
- .options-layout #result-controls { grid-area:result; }
- .options-layout #controls { grid-area:controls; }
- .options-layout #help { grid-area:help; justify-self:start; }
+ .options-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:calc(32 * var(--suite-px, 1px)); align-items:start; }
+ .options-source,.options-query { display:flex; flex-direction:column; gap:calc(8 * var(--suite-px, 1px)); align-items:flex-start; min-width:0; }
+ .options-query { width:fit-content; max-width:100%; }
  .options #controls { max-width:none; }
  .options #tables { width:auto; }
+ #options .ctl .row { width:fit-content; max-width:100%; grid-template-columns:repeat(2,minmax(12ch,24ch)) max-content; }
+ #options .ctl .row.two { grid-template-columns:max-content minmax(12ch,24ch); }
+ #options .ctl select.ctl-sel, #options .ctl input.ctl-inp { width:auto; min-width:12ch; max-width:min(24ch,100%); }
 }
+.seg-group { display:flex; align-items:center; flex-wrap:wrap; min-width:0; }
+.options #help { height:auto; min-height:0; padding:calc(12 * var(--suite-px, 1px)) 0; justify-content:flex-start; background:transparent; font:inherit; }
+.options #help::before { content:'▸'; margin-right:calc(4 * var(--suite-px, 1px)); }
 .progress [data-complete=true] { background:var(--accent); }
 
 .bench { min-height:0; }
