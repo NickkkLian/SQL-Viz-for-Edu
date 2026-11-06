@@ -479,7 +479,7 @@ function runPractice() {
     practice.showAll = !practice.verdict.ok;
   } catch (e) { practice.error = e.message; practice.errorFromSQLite = true; }
   finally { scratch.close(); }
-  saveDraft(!!practice.verdict?.ok); renderExercises();
+  saveDraft(!!practice.verdict?.ok); renderExercises(); renderLesson();
   renderMirror(); renderSchema();
   const st = $('#mirror .verdict'); if (st) st.scrollIntoView({ block: 'nearest' });
 }
@@ -573,9 +573,11 @@ function renderLesson() {
   const task = currentExercise();
   $('#task-title').textContent = task ? task.title : state.db === 'hospital' && state.filters.some(f=>f.col==='pa_city' && f.val==='Toronto') ? 'Find the patients in Toronto' : 'Build a query, see its rows';
   $('#task-subtitle').textContent = task ? task.prompt : 'Choose what to show. The SQL and matching rows update together.';
-  const index = Math.max(0, Q.EXERCISES[state.db].findIndex(t=>t.id===exercise));
-  $('#lesson-number').textContent = 'Exercise ' + (index + 1) + ' of 8';
-  fill($('#lesson-dots'), Q.EXERCISES[state.db].map((task,i)=>h('i', {class:i===index?'current':null})));
+  const tasks = Q.EXERCISES[state.db];
+  const index = tasks.findIndex(t => t.id === exercise);
+  const completed = tasks.filter(t => Q.loadProgress(progressStorage, state.db, t.id).completed).length;
+  $('#lesson-number').textContent = index < 0 ? (mode === 'practice' ? 'Custom practice' : 'Explore freely') : 'Exercise ' + (index + 1) + ' of ' + tasks.length + ' · ' + completed + ' complete';
+  fill($('#lesson-dots'), index < 0 ? [] : tasks.map((t, i) => h('i', {class:i === index ? 'current' : null, 'data-complete':String(Q.loadProgress(progressStorage, state.db, t.id).completed)})));
   fill($('#column-picks'), cols().filter(c=>state.tables.length===1 && state.tables[0]==='patient' ? ['pa_first','pa_last','pa_city','pa_country'].includes(c.id) : !c.hide).map(c=>h('label', {}, h('input', {type:'checkbox', checked:state.cols.includes(c.id), disabled:!!exercise, onchange:()=>toggleCol(c.id)}), h('span', {}, c.id==='pa_city'?'city':c.id==='pa_country'?'country':c.label))));
   const sourceRows = state.tables.reduce((n,t)=>n+(ROWCOUNT[state.db]?.[t]||0),0);
   const count = lastResult?.rows.length || 0;

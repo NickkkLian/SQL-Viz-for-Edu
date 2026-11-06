@@ -47,6 +47,8 @@ try {
   };
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await navigate('');
+  await test('free exploration has no exercise ordinal or completion dots', () => evaluate(`document.querySelector('#lesson-number').textContent==='Explore freely' && document.querySelector('#lesson-dots').children.length===0`));
+  await test('desktop options align with the workspace and the SQL fits its contents', () => evaluate(`document.querySelector('#reference-open').click(); var options=document.querySelector('#options').getBoundingClientRect(), main=document.querySelector('#main').getBoundingClientRect(), style=getComputedStyle(document.querySelector('#main')); Math.abs(options.left-parseFloat(style.paddingLeft))<2 && options.width>innerWidth*.85 && document.querySelector('#mirror pre').getBoundingClientRect().height<200`));
   await test('first visit shows real result rows and the result-grading explanation', () => evaluate(`!!document.querySelector('#results > .tablewrap table.data tbody tr') && document.querySelector('#grading-note').textContent.includes('missing or extra')`));
   await navigate('?db=hospital&tables=patient');
   await test('LIMIT control shows real SQL and limits the visible result to ten rows', () => evaluate(`var e=document.querySelector('select[aria-label="Rows to show"]'); e.value='10'; e.dispatchEvent(new Event('change',{bubbles:true})); document.querySelector('#mirror pre').textContent.includes('LIMIT 10') && document.querySelectorAll('#results > .tablewrap table.data tbody tr').length===10`));
@@ -64,6 +66,7 @@ try {
     return evaluate(`document.querySelector('#mirror pre').textContent.includes("LIKE 'E%'") && document.querySelector('#mirror pre').textContent.includes("OR city = 'Toronto'") && !!document.querySelector('#results > .tablewrap table.data tbody tr') && !document.querySelector('#results [role="alert"]')`);
   });
   await navigate('?db=hospital&exercise=names');
+  await test('fixed exercise shows its ordinal and progress dots', () => evaluate(`document.querySelector('#lesson-number').textContent.includes('Exercise 1 of 8') && document.querySelectorAll('#lesson-dots i').length===8`));
   await test('exercise link opens a fixed practice task with hint, hidden SQL and disabled target controls', () => evaluate(`!!document.querySelector('#editor') && !!document.querySelector('#exercise-hint') && !document.querySelector('#mirror pre') && document.querySelector('#controls').hidden && [...document.querySelectorAll('#tbl-list input')].every(e=>e.disabled)`));
   await test('hint reveals relevant teaching text', () => evaluate(`document.querySelector('#exercise-hint').open=true; document.querySelector('#exercise-hint').textContent.includes('first_name')`));
   await test('draft is restored after a reload', async () => {
@@ -73,6 +76,7 @@ try {
   });
   await test('wrong answer shows missing/extra rows and does not mark completion', () => evaluate(`document.querySelector('#mirror .btn-primary').click(); !!document.querySelector('.verdict.bad') && !!document.querySelector('.legend') && !document.querySelector('#exercise-progress').textContent.startsWith('1 /')`));
   await test('equivalent answer with swapped columns passes and marks progress', () => evaluate(`document.querySelector('#editor').value="SELECT city, first_name||' '||last_name FROM patient"; document.querySelector('#mirror .btn-primary').click(); !!document.querySelector('.verdict.ok') && document.querySelector('#exercise-progress').textContent.startsWith('1 /')`));
+  await test('completing an exercise immediately updates the lesson indicator', () => evaluate(`document.querySelector('#lesson-number').textContent.includes('1 complete') && document.querySelector('#lesson-dots i').dataset.complete==='true'`));
   await test('copy task link preserves the fixed exercise and works as a file URL', async () => {
     await evaluate(`Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async url=>{window.copied=url}}}); [...document.querySelectorAll('#mirror button')].find(b=>b.textContent==='Copy task link').click()`);
     return evaluate(`copied.startsWith('file://') && new URL(copied).searchParams.get('exercise')==='names' && new URL(copied).searchParams.get('mode')==='practice'`);
