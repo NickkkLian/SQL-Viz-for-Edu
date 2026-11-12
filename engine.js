@@ -560,24 +560,31 @@ const EXERCISES={
   ]
 };
 // Counterexample datasets (variants). A query can return the right rows on the one teaching dataset by luck
-// (a boundary written as >= instead of >, or the rows typed in as literals). Each variant is the teaching data plus
+// (a boundary written as >= instead of >, a LIKE pattern that matches anywhere instead of at the start, a sort on the
+// first name instead of the full name, a DISTINCT that hides a real repeat, or the rows typed in as literals). Each variant is the teaching data plus
 // a few hand-written rows: one row on the boundary the task excludes, and one row the task includes. The task's own
 // target is re-run on each variant and the student's query must still match. Variants only ADD rows.
 const VARIANTS={
   hospital:{
     and:[{id:'fee-250',label:'two appointments are added, with fees of exactly 250 and 200',sql:"INSERT INTO appointment VALUES (3901,101,201,'2024-06-01','Check-up',250),(3902,102,202,'2024-06-02','Check-up',200);"}],
-    groups:[{id:'one-in-halifax',label:'one patient in Halifax and two in Victoria are added',sql:"INSERT INTO patient VALUES (901,'Lee','Sam','1991-01-01','M','Halifax','CA'),(902,'Ng','Ada','1988-05-02','F','Victoria','CA'),(903,'Roy','Ben','1979-09-30','M','Victoria','CA');"}]
+    groups:[{id:'one-in-halifax',label:'one patient in Halifax and two in Victoria are added',sql:"INSERT INTO patient VALUES (901,'Lee','Sam','1991-01-01','M','Halifax','CA'),(902,'Ng','Ada','1988-05-02','F','Victoria','CA'),(903,'Roy','Ben','1979-09-30','M','Victoria','CA');"}],
+    limit:[{id:'two-aarons',label:'two patients named Aaron are added, Aaron Young before Aaron Baker',sql:"INSERT INTO patient VALUES (911,'Young','Aaron','1990-03-14','M','Toronto','Canada'),(912,'Baker','Aaron','1985-07-22','M','Calgary','Canada');"}]
   },
   ecommerce:{
     prices:[{id:'price-50',label:'two products are added, priced exactly 50 and 64.50',sql:"INSERT INTO product VALUES ('P901','Desk Lamp','Office',30,50.0),('P902','Monitor Arm','Office',12,64.5);"}],
     and:[{id:'edges',label:'three products are added: stock exactly 50, price exactly 50, and one well inside both limits',sql:"INSERT INTO product VALUES ('P903','Cable Kit','Electronics',50,20.0),('P904','Yoga Block','Sports',80,50.0),('P905','Pen Set','Office',120,9.5);"}],
-    groups:[{id:'avg-50',label:'a Garden category averaging exactly 50 and an Audio category averaging 120 are added',sql:"INSERT INTO product VALUES ('P906','Planter','Garden',40,50.0),('P907','Speaker','Audio',25,120.0);"}]
+    groups:[{id:'avg-50',label:'a Garden category averaging exactly 50 and an Audio category averaging 120 are added',sql:"INSERT INTO product VALUES ('P906','Planter','Garden',40,50.0),('P907','Speaker','Audio',25,120.0);"}],
+    join:[{id:'same-day-order',label:'Lily Chen places a second order on 2024-01-15, also delivered',sql:"INSERT INTO order_hdr VALUES (1901,'2024-01-15',1,'Delivered');"}]
   },
   movies:{
-    groups:[{id:'avg-8',label:'a Western rated exactly 8.0 and a Musical rated 8.6 are added',sql:"INSERT INTO film VALUES ('F901','Dust Road',2019,8.0,'Western',41.0,118),('F902','City of Song',2022,8.6,'Musical',210.0,131);"}]
+    groups:[{id:'avg-8',label:'a Western rated exactly 8.0 and a Musical rated 8.6 are added',sql:"INSERT INTO film VALUES ('F901','Dust Road',2019,8.0,'Western',41.0,118),('F902','City of Song',2022,8.6,'Musical',210.0,131);"}],
+    like:[{id:'the-titles',label:'three films are added: The Quiet Shore, Into the Wild Coast and Theory of Ash',sql:"INSERT INTO film VALUES ('F911','The Quiet Shore',2023,7.4,'Drama',18.0,104),('F912','Into the Wild Coast',2020,7.1,'Action',22.5,112),('F913','Theory of Ash',2021,6.9,'Drama',9.8,97);"}]
   },
   university:{
-    groups:[{id:'avg-3.4',label:'a Philosophy student with a GPA of exactly 3.4 and a Music student with 3.9 are added',sql:"INSERT INTO student VALUES (1901,'Kant','Ivy','Philosophy',2023,3.4,NULL),(1902,'Bach','Leo','Music',2022,3.9,NULL);"}]
+    groups:[{id:'avg-3.4',label:'a Philosophy student with a GPA of exactly 3.4 and a Music student with 3.9 are added',sql:"INSERT INTO student VALUES (1901,'Kant','Ivy','Philosophy',2023,3.4,NULL),(1902,'Bach','Leo','Music',2022,3.9,NULL);"}],
+    like:[{id:'cs-inside',label:'two courses are added: ECS210, which has CS inside its code, and CS450',sql:"INSERT INTO course VALUES ('ECS210','Embedded Computing Systems','Engineering',3,40),('CS450','Distributed Systems','Computer Science',3,35);"}],
+    limit:[{id:'two-aarons',label:'two students named Aaron are added, Aaron Young before Aaron Baker',sql:"INSERT INTO student VALUES (1911,'Young','Aaron','Engineering',2023,3.1,NULL),(1912,'Baker','Aaron','Biology',2022,3.6,NULL);"}],
+    join:[{id:'retake',label:'Emma Adams takes Intro to Programming again in Fall 2022',sql:"INSERT INTO enrollment VALUES (1901,1001,'CS101','Fall 2022','B',85);"}]
   }
 };
 function variantsFor(db,id){ return ((VARIANTS[db]||{})[id])||[]; }
