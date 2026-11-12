@@ -1,6 +1,6 @@
 # Query Mirror
 
-**Learn SQL by building a query with clicks, then write an equivalent query and check its results.**
+**Learn SQL by clicking: every click becomes the SQL behind it, then practice shows which rows your own query gets wrong.**
 
 For SQL learners and teachers: pick tables and filters, see the generated `SELECT`, then switch to Practice to find missing or extra rows in your answer.
 
@@ -12,16 +12,15 @@ No account, install or server. Four synthetic teaching datasets run in SQLite in
 
 ## Quick start
 
-Open the live demo above, or clone and open `index.html` in a modern browser; the SQLite engine is included and works offline.
+Open the live demo above, or clone the repository and open `index.html` in any modern browser. There is no install step and no dev server: `index.html`, `engine.js`, `app.js`, the tokens, licensed fonts and `vendor/` are the whole app, and the SQLite engine is included, so it works offline.
 
 ```sh
 git clone https://github.com/NickkkLian/SQL-Viz-for-Edu.git
 cd SQL-Viz-for-Edu
-# Open index.html in your browser. Optional checks (Node.js 20+):
-node check.mjs
+# then open index.html
 ```
 
-The opening lesson generates SELECT first_name, city FROM patient WHERE city = 'Toronto'; and uses those column names in the chips and both tables. Matching rows includes row numbers and a Live preview status. The source preview shows four real teaching rows beside the result; Show all source rows reveals the rest. Wide tables become labeled records when their columns do not fit, at every viewport width. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
+The opening lesson generates `SELECT first_name, city FROM patient WHERE city = 'Toronto';` and uses those column names in the chips and both tables. Matching rows includes row numbers and a Live preview status. The source preview shows four real teaching rows beside the result; Show all source rows reveals the rest. **Tables and exercises** contains all four datasets, 32 saved exercises, table selection and advanced query controls. **Result options** there contains columns, duplicate handling, sort and limit.
 
 Explore follows your clicks; Practice hides the target SQL and compares results instead of requiring identical wording. Eight exercises per dataset include hints and save progress in this browser when storage is available. Clearing site data removes that progress. The screenshot shows the opening lesson. The demo link opens the Movies dataset.
 
@@ -45,7 +44,7 @@ The teaching datasets now declare their primary and foreign keys in the SQL itse
 
 Use Tab and Enter to collapse the panel or open its full text equivalent. Tab to either diagram and use arrow keys to scroll; wide diagrams stay inside their panels on phones. Keys and join status are conveyed in text as well as color.
 
-The query reader covers a single flat `SELECT` with aliases, multiple joins, self-joins, qualified equality predicates joined by `AND`, and unambiguous `USING`. Cross/comma/natural and non-key joins show no confirmed foreign key. `OR`/`NOT` predicates are explicitly marked unconfirmed. Subqueries, CTEs, compound queries, unknown tables and ambiguous aliases show **Path unavailable** instead of guessing; SQLite execution and grading still work independently. This is a static explanation of the executed SQL, not an animated SQLite execution plan or a row-by-row traversal.
+The query reader covers a single flat `SELECT` with aliases, multiple joins, self-joins, qualified equality predicates joined by `AND`, and unambiguous `USING`. Cross/comma/natural and non-key joins show no confirmed foreign key. `OR`/`NOT` predicates are explicitly marked unconfirmed. Subqueries, CTEs, compound queries, unknown tables and ambiguous aliases show **Path unavailable** instead of guessing; SQLite execution and grading still work independently.
 
 ![Practice mode: the expected result, your SQL, and a graded verdict](docs/screenshot-practice.png)
 
@@ -59,6 +58,17 @@ The query reader covers a single flat `SELECT` with aliases, multiple joins, sel
 | University | Students, Courses, Enrollments | Many-to-many, `GROUP BY` + `HAVING` |
 
 All four are generated for teaching: no real people, companies or patients. They live in `engine.js` as SQL text and are loaded into SQLite in memory when the page opens.
+
+## Deep links
+
+| Link | Opens |
+|---|---|
+| `?db=movies&tables=film,director` | Films joined to directors through the bridge table |
+| `?db=university&tables=student` | Students, ready to group |
+| `…&mode=practice` | The same state as a practice task |
+| `?db=hospital&exercise=names` | The first Hospital exercise, in practice mode with its fixed target |
+
+Older links using only `db` and `tables` still work. Unknown tables or columns in a link are dropped rather than trusted.
 
 ## How it is put together
 
@@ -83,43 +93,24 @@ flowchart LR
 
 `engine.js` holds the builder and grader; `schema.js` reads schema declarations and query paths. Both touch no DOM and run unchanged in the page and under `node`.
 
+## Limits
+
+- **The mirror uses SQLite syntax, not Oracle-verified SQL.** The displayed query runs in SQLite, including a real `LIMIT` clause. `CAST(… AS TEXT)` and `LIMIT` are SQLite spellings; nothing is run against an Oracle instance.
+- **A teaching subset in the click builder.** Inner and left joins along fixed schema keys, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `DISTINCT`, and five aggregates. No subqueries, self-joins, window functions, unions or writes in the builder. Practice accepts SQLite read queries, and its diagram supports flat self-joins as described above.
+- **Grading compares results, not SQL.** An elegant query returning different rows fails. Column names and order are ignored; row order is checked only when the task has a sort. A query that returns the right rows by luck can still pass, except on the 13 exercises that have a counterexample dataset: the AND, price and GROUP BY tasks where a `>=` written for `>` used to match the teaching data; the two `LIKE` tasks where a pattern that matches anywhere, or `'The%'` without its space, did; the two "first ten" name tasks where sorting by the first name alone did; and the ecommerce and university join tasks where a `DISTINCT` hid a real repeat (a second order, a retaken course). A small extra dataset adds the rows that tell the right query from the lucky one, and the page shows the rows, or the row order, your query gets wrong there. The other 19 exercises have none yet.
+- **Joins are chosen for you.** Tables are connected along the schema's declared edges by shortest path, so the explorer cannot produce an accidental cross join — and cannot demonstrate one either.
+- **Conditions use SQL precedence.** Each condition after the first chooses `AND` or `OR`; `AND` is evaluated first. Parenthesized condition groups are outside the click builder. Text `LIKE` accepts `%` (any text) and `_` (one character), using SQLite's default case rules.
+- **Progress belongs to this browser.** Saved drafts and completion are local, without an account or sync. Storage can be unavailable in private/restricted contexts; practice still works and shows “saving unavailable.” Custom tasks have no saved progress. A result match counts as completion even after revealing the mirror; this is a learning aid, not an exam record.
+- **Datasets are tiny** (5–50 rows per table). Good for reading a result by eye, useless for anything about performance.
+- **The join diagram explains, it does not animate.** This is a static explanation of the executed SQL, not an animated SQLite execution plan or a row-by-row traversal.
+
 ## Checks
 
 ```bash
 node check.mjs
-node tests/upgrade.mjs
-node tests/variants.mjs
-node tests/schema.mjs
-node tests/schema.mjs --mutations
-node tests/upgrade-browser.mjs
 ```
 
-It covers the vendored sql.js hashes, the engine loading as a browser global, **31 fixtures** (a click state, its pinned SQL, and the row and column counts it returns when executed in SQLite), the URL codec round-trip, the practice grader (column and row order, renamed columns, NULLs, float tolerance, one-statement rule, naming the wrong column) and page hygiene.
-
-The upgrade checks execute all 32 exercise targets against independent handwritten reference queries in the vendored SQLite, then check executable displayed `LIMIT`, quoted text, `AND`/`OR` precedence, `LIKE` wildcards, task links and progress storage. The variant checks (`tests/variants.mjs`) run fifteen mistakes that pass the teaching data (eight boundary mistakes, three `LIKE` patterns, two first-name sorts and two `DISTINCT`s that hide a repeat) and the hardcoded answers against the counterexample datasets: each must fail there, while the reference and an equivalent rewrite pass. The browser checks use installed Chrome with HTTP(S) page requests blocked; they cover hints, draft restoration, grading, completion, next task and unavailable storage. No package install or server is required.
-
-Schema checks cover parsing, multi-join paths, aliases, self-joins, composite keys, the no-foreign-key note, unsupported scopes and agreement with SQLite. `--mutations` breaks the schema reader, alias resolution, self-join handling, multi-join extraction and missing-FK note one at a time; each must fail its intended test. Browser checks also exercise the diagram, keyboard disclosure/scrolling, practice target privacy and last-run behavior. Set `QM_SCREENSHOTS=docs/erd-proof` to capture desktop (1440px) and phone (390px) multi-join, self-join and missing-FK states with HTTP(S) blocked.
-
-```bash
-node check.mjs --break
-```
-
-Alters one fixture's SQL and another's row count and must exit non-zero. If it ever passes, the fixture checks are not actually running.
-
-```bash
-git show 6d58775c8a619a9c990ddd2a2f40a1b392885bee:index.html > /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
-node tests/parity.mjs /tmp/explorer-6d58775c8a619a9c990ddd2a2f40a1b392885bee.html
-```
-
-The fixtures pin the behaviour of the explorer this project started as. `tests/parity.mjs` loads the query builder out of that original single-file app (commit `6d58775c8a619a9c990ddd2a2f40a1b392885bee`), runs it in a sandbox over every fixture state and compares ordered row values and column counts. Join queries also retain byte-identical SQL. Single-table queries use plain column names and no AS labels.
-
-```bash
-node tests/boot-failure.mjs
-```
-
-Opens the page in headless Chrome with a broken engine (truncated, garbage, empty and non-base64 wasm) and requires the "SQLite could not start" alert and its Reload button to still be there after 1.5 s, past the 300 ms loading timer. A copy with the real engine must reach "SQLite ready", so a harness that sees nothing cannot pass. Set `CHROME=/path/to/chrome` if Chrome is not in a usual place.
-
-CI runs all of these on every push (`.github/workflows/check.yml`).
+Needs Node 20 or newer (CI runs 20 and 22). It covers the vendored sql.js hashes, the engine loading as a browser global, **31 fixtures** (a click state, its pinned SQL, and the row and column counts it returns when executed in SQLite), the URL codec round-trip, the practice grader and page hygiene. The exercise, counterexample, schema, browser, parity and boot-failure checks, and what each one covers, are in [DOCS.md](DOCS.md). CI runs all of them on every push (`.github/workflows/check.yml`).
 
 ## Self-hosted engine
 
@@ -131,35 +122,5 @@ sql-wasm.js    sha256 3358bb12892642698c0804c85cba48de562bc2de324fe58a422f282832
 ```
 
 Both were byte-compared against the npm tarball for sql.js version 1.10.2. `vendor/sql-wasm-b64.js` carries the same wasm bytes as base64, because a page opened from `file://` cannot fetch a sibling `.wasm` — that is why a downloaded copy works by double-clicking `index.html`.
-
-## Limits — what this is not
-
-- **The mirror uses SQLite syntax, not Oracle-verified SQL.** The displayed query runs in SQLite, including a real `LIMIT` clause. `CAST(… AS TEXT)` and `LIMIT` are SQLite spellings; nothing is run against an Oracle instance.
-- **A teaching subset in the click builder.** Inner and left joins along fixed schema keys, `WHERE`, `GROUP BY`, `HAVING`, `ORDER BY`, `DISTINCT`, and five aggregates. No subqueries, self-joins, window functions, unions or writes in the builder. Practice accepts SQLite read queries, and its diagram supports flat self-joins as described above.
-- **Grading compares results, not SQL.** An elegant query returning different rows fails. Column names and order are ignored; row order is checked only when the task has a sort. A query that returns the right rows by luck can still pass, except on the 13 exercises that have a counterexample dataset: the AND, price and GROUP BY tasks where a `>=` written for `>` used to match the teaching data; the two `LIKE` tasks where a pattern that matches anywhere, or `'The%'` without its space, did; the two "first ten" name tasks where sorting by the first name alone did; and the ecommerce and university join tasks where a `DISTINCT` hid a real repeat (a second order, a retaken course). A small extra dataset adds the rows that tell the right query from the lucky one, and the page shows the rows, or the row order, your query gets wrong there. The other 19 exercises have none yet.
-- **Joins are chosen for you.** Tables are connected along the schema's declared edges by shortest path, so the explorer cannot produce an accidental cross join — and cannot demonstrate one either.
-- **Conditions use SQL precedence.** Each condition after the first chooses `AND` or `OR`; `AND` is evaluated first. Parenthesized condition groups are outside the click builder. Text `LIKE` accepts `%` (any text) and `_` (one character), using SQLite's default case rules.
-- **Progress belongs to this browser.** Saved drafts and completion are local, without an account or sync. Storage can be unavailable in private/restricted contexts; practice still works and shows “saving unavailable.” Custom tasks have no saved progress. A result match counts as completion even after revealing the mirror; this is a learning aid, not an exam record.
-- **Datasets are tiny** (5–50 rows per table). Good for reading a result by eye, useless for anything about performance.
-
-## Run it locally
-
-```bash
-git clone https://github.com/NickkkLian/SQL-Viz-for-Edu.git
-cd SQL-Viz-for-Edu
-```
-
-Then open `index.html` in any browser. There is no install step and no dev server: `index.html`, `engine.js`, `app.js`, the tokens, licensed fonts and `vendor/` are the whole app. The checks need Node 20 or newer (CI runs 20 and 22).
-
-## Deep links
-
-| Link | Opens |
-|---|---|
-| `?db=movies&tables=film,director` | Films joined to directors through the bridge table |
-| `?db=university&tables=student` | Students, ready to group |
-| `…&mode=practice` | The same state as a practice task |
-| `?db=hospital&exercise=names` | The first Hospital exercise, in practice mode with its fixed target |
-
-Older links using only `db` and `tables` still work. Unknown tables or columns in a link are dropped rather than trusted.
 
 MIT · built by Nick Lian
