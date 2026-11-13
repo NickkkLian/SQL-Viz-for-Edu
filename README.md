@@ -4,7 +4,7 @@
 
 For SQL learners and teachers: pick tables and filters, see the generated `SELECT`, then switch to Practice to find missing or extra rows in your answer.
 
-**[Try the live demo](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector)** · [Start a practice exercise](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=hospital&exercise=names)
+**[Try the live demo](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=movies&tables=film%2Cdirector&q=eyJjIjpbImZpX3RpdGxlIiwiZmlfeWVhciIsImZpX3JhdGluZyIsImZpX2dlbnJlIiwiZGlfbmFtZSIsImNsX2NvbnRyaWIiXSwiZiI6W1siZmlfcmF0aW5nIiwiaXMgYXQgbGVhc3QiLCI4Il1dLCJzIjpbImZpX3JhdGluZyIsIkRFU0MiXX0)** · [Start a practice exercise](https://nickkklian.github.io/SQL-Viz-for-Edu/?db=hospital&exercise=names)
 
 No account, install or server. Four synthetic teaching datasets run in SQLite inside your browser.
 
