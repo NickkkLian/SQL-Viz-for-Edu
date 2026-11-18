@@ -1,7 +1,5 @@
 # Query Mirror: checks in detail
 
-The full test suite, moved here from the README. The README keeps the main command (`node check.mjs`).
-
 ## Checks
 
 ```bash

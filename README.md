@@ -12,7 +12,7 @@ No account, install or server. Four synthetic teaching datasets run in SQLite in
 
 ## Quick start
 
-Open the live demo above, or clone the repository and open `index.html` in any modern browser. There is no install step and no dev server: `index.html`, `engine.js`, `app.js`, the tokens, licensed fonts and `vendor/` are the whole app, and the SQLite engine is included, so it works offline.
+Open the live demo above, or clone the repository and open `index.html` in any modern browser. The SQLite engine is included, so it works offline.
 
 ```sh
 git clone https://github.com/NickkkLian/SQL-Viz-for-Edu.git
@@ -40,7 +40,7 @@ Open **Schema & query path** below the mirror. Explore follows the query that ju
 
 Solid highlighted lines correspond to declared foreign keys. A join on another column (for example `customer a JOIN customer b ON a.city=b.city`) gets a dashed query edge and the explicit note **“No declared foreign key for this join.”** Multiple aliases of the same table get separate query nodes, so `child.referred_by = parent.cust_id` is visible as a self-join. Join descriptions name the exact alias/column pairs. Composite foreign keys need all column pairs before a relationship lights up.
 
-The teaching datasets now declare their primary and foreign keys in the SQL itself, including customer and viewer referral self-relations; checks load every row with SQLite foreign-key enforcement enabled. The diagram does not infer keys from column names or borrow the builder’s relationship list. The schema reader handles inline and table constraints, composite keys, quoted identifiers, comments and references that omit the parent’s primary-key columns. No new library or remote service is used.
+The teaching datasets declare their primary and foreign keys in the SQL itself, including customer and viewer referral self-relations. The diagram reads only those declarations; it does not infer keys from column names. The schema reader handles inline and table constraints, composite keys, quoted identifiers, comments and references that omit the parent’s primary-key columns.
 
 Use Tab and Enter to collapse the panel or open its full text equivalent. Tab to either diagram and use arrow keys to scroll; wide diagrams stay inside their panels on phones. Keys and join status are conveyed in text as well as color.
 
@@ -102,7 +102,6 @@ flowchart LR
 - **Conditions use SQL precedence.** Each condition after the first chooses `AND` or `OR`; `AND` is evaluated first. Parenthesized condition groups are outside the click builder. Text `LIKE` accepts `%` (any text) and `_` (one character), using SQLite's default case rules.
 - **Progress belongs to this browser.** Saved drafts and completion are local, without an account or sync. Storage can be unavailable in private/restricted contexts; practice still works and shows “saving unavailable.” Custom tasks have no saved progress. A result match counts as completion even after revealing the mirror; this is a learning aid, not an exam record.
 - **Datasets are tiny** (5–50 rows per table). Good for reading a result by eye, useless for anything about performance.
-- **The join diagram explains, it does not animate.** This is a static explanation of the executed SQL, not an animated SQLite execution plan or a row-by-row traversal.
 
 ## Checks
 

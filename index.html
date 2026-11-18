@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>(function(){try{var s=localStorage.getItem('r3-theme')||localStorage.getItem('nl-scheme')||localStorage.getItem('qm-theme')||localStorage.getItem('theme');document.documentElement.dataset.theme=s==='dark'?'dark':'light';}catch(e){document.documentElement.dataset.theme='light';}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Every click becomes the SQL behind it — practice is graded on results, not wording. Query Mirror is a browser-only teaching explorer over four synthetic datasets, with a practice mode that grades your own SQL against the mirror. No build, no server, nothing uploaded.">
+<meta name="description" content="Every click becomes the SQL behind it — practice is graded on results, not wording. Query Mirror is a browser-only SQL teaching explorer over four synthetic datasets. Nothing is uploaded.">
 <meta name="theme-color" content="#f8f7f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#161724" media="(prefers-color-scheme: dark)">
 <title>Query Mirror</title>
@@ -43,7 +43,7 @@
       <section class="card" id="schema-panel" aria-labelledby="schema-heading">
         <details id="schema-details" open>
           <summary id="schema-heading">Schema &amp; query path</summary>
-          <p class="hint">PK = primary key · FK = foreign key. Solid lines are declared relationships; dashed lines are joins without a confirmed foreign key. Highlighted tables and lines belong to the last executed query. The diagrams fit the available width. Open the text version below for the same relationships.</p>
+          <p class="hint">PK = primary key · FK = foreign key. Solid lines are declared relationships; dashed lines are joins without a confirmed foreign key. Highlighted tables and lines belong to the last executed query. Open the text version below for the same relationships.</p>
           <p id="schema-status" role="status"></p>
           <div id="query-path"></div>
           <div id="schema-graph" class="erd-scroll" tabindex="0" role="region" aria-label="Schema diagram, scroll to explore"></div>
@@ -56,7 +56,7 @@
 <div class="honest">
   <dl class="honest-in">
     <div><dt>About this tool</dt>
-    <dd>Four small synthetic datasets (hospital, e-commerce, movies, university) live inside <code>engine.js</code>; SQLite runs in your browser through sql.js 1.10.2 (vendored in <code>vendor/</code>). Every checkbox, filter, grouping and sort you set is turned into one <code>SELECT</code>, shown in the mirror and executed. Practice mode hides the mirror and grades the SQL you write against the same result. No build, no server, no account, nothing uploaded.</dd></div>
+    <dd>Four small synthetic datasets (hospital, e-commerce, movies, university) live inside <code>engine.js</code>; SQLite runs in your browser through sql.js 1.10.2 (vendored in <code>vendor/</code>). Every checkbox, filter, grouping and sort you set is turned into one <code>SELECT</code>, shown in the mirror and executed. Practice mode hides the mirror and grades the SQL you write against the same result. No account; nothing is uploaded.</dd></div>
     <div><dt>Not verified here</dt>
     <dd>The engine and displayed SQL use SQLite syntax, including <code>CAST(… AS TEXT)</code> and <code>LIMIT</code>; queries are not verified against Oracle. The generator covers a teaching subset (inner and left joins along fixed keys, <code>WHERE</code> with <code>AND</code>/<code>OR</code> and <code>LIKE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>DISTINCT</code>, five aggregates); subqueries, self-joins and window functions are out of scope. Practice grading compares result sets, not SQL text. Exercise drafts and completion are saved only in this browser when storage is available; clearing site data removes them.</dd></div>
     <div><dt>Source</dt>
