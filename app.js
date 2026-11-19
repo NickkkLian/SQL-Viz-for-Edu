@@ -21,6 +21,7 @@ const h = (tag, attrs = {}, ...kids) => {
 };
 // replaceChildren() does not flatten arrays or skip nulls the way h() does — everything goes through this.
 const fill = (el, ...kids) => { el.replaceChildren(...kids.flat(Infinity).filter(k => k !== null && k !== undefined && k !== false).map(k => k.nodeType ? k : document.createTextNode(String(k)))); return el; };
+const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');   // 1 join, 2 joins
 const DB_LABEL = { hospital: 'Hospital', ecommerce: 'E-Commerce', movies: 'Movies', university: 'University' };
 
 // ── state ──
@@ -228,7 +229,7 @@ function renderSchema() {
   const trace = ER.queryPath(tracedDB === state.db ? tracedSQL : '', schema);
   const active = new Set(trace.instances.map(t => t.table));
   const verticalPath = narrow || trace.instances.length * 220 > $('#query-path').clientWidth / scale;
-  fill($('#schema-status'), trace.message || tracedLabel + ' · ' + trace.instances.length + ' table instances · ' + trace.joins.length + ' joins');
+  fill($('#schema-status'), trace.message || tracedLabel + ' · ' + plural(trace.instances.length, 'table instance') + ' · ' + plural(trace.joins.length, 'join'));
   const instanceLabel = id => { const t = trace.instances.find(t => t.id === id); return t ? t.table + (t.alias === t.table ? '' : ' AS ' + t.alias) : '?'; };
   fill($('#query-path'),
     trace.instances.length ? h('div', { class: 'erd-instances', 'aria-label': 'Query table instances' }, trace.instances.map((t, i) =>
@@ -389,7 +390,7 @@ function renderMirrorPanel() {
     h('div', {class:'lesson-modes'}, h('button', {class:'btn selected', onclick:()=>setMode('explore')}, 'Build with clicks'), h('button', {class:'btn btn-ghost', onclick:()=>setMode('practice')}, 'Write SQL')),
     lastSQL ? h('pre', { html: highlightSQL(Q.formatSQL(lastSQL)) }) : h('p', { class: 'none' }, lastBuildError || lastError || ''),
     h('div', {class:'lesson-run'}, h('button', {class:'btn btn-primary', disabled:noRows, onclick:()=>setMode('practice')}, 'Write it yourself'), h('span', {}, 'Your choices run automatically')),
-    h('p', { class:'live-feedback'}, lastResult ? lastResult.rows.length + ' rows match your choices.' : 'Choose tables and columns.'),
+    h('p', { class:'live-feedback'}, lastResult ? plural(lastResult.rows.length, 'row') + ' match' + (lastResult.rows.length === 1 ? 'es' : '') + ' your choices.' : 'Choose tables and columns.'),
     h('p', { class: 'explain' }, 'Reading: ', h('b', {}, tablesLabel()), state.limit !== 'All' ? ' · top ' + state.limit + ' rows' : '', state.sort ? ' · sorted by ' + (colById(state.sort.col) || {}).label + ' ' + (state.sort.dir === 'ASC' ? 'ascending' : 'descending') : '')
   );
 }
@@ -548,7 +549,7 @@ function renderResultsPanel() {
         : h('button', { type: 'button', class: 'btn btn-sm', onclick: () => { Object.assign(state, { cols: Q.defaultCols(state.db, state.tables), filters: [], group: null, sort: null, distinct: false, limit: 'All' }); update(); } }, 'Reset this query')))
     : lastResult ? h('div', { class: 'tablewrap' }, resultTable(lastResult, { sortable: true, rowNumbers: true })) : null;
   fill(r, 
-    h('div', { class:'result-heading'}, h('h2', {}, 'Matching rows'), h('span', {class:'row-count'}, lastResult ? lastResult.rows.length + ' rows' : '')),
+    h('div', { class:'result-heading'}, h('h2', {}, 'Matching rows'), h('span', {class:'row-count'}, lastResult ? plural(lastResult.rows.length, 'row') : '')),
     h('details', {class:'result-options', open:optionsOpen}, h('summary', {}, 'Result options'), h('div', { class: 'toolbar' }, h('h2', { style: 'font-size:var(--text-sm);font-weight:var(--weight-semibold);margin:0' }, 'Result'), colsBtn,
       h('button', { type: 'button', class: 'btn btn-sm', 'aria-pressed': String(state.distinct), disabled: !!state.group, title: state.group ? 'Grouping already collapses duplicates' : 'Hide rows identical in every column', onclick: toggleDistinct }, 'Hide duplicates'),
       sortSel, dirSel, limSel,
@@ -565,7 +566,7 @@ function renderSource() {
   if (!ready || !state.tables.length) return null;
   const table = state.tables[0];
   const source = exec(state.db, table==='patient' ? 'SELECT first_name, city FROM patient' : 'SELECT * FROM "' + table + '"');
-  return h('section', {class:'source-table'}, h('div', {class:'result-heading'}, h('h3', {}, 'Source table'), h('span', {class:'row-count'}, source.rows.length + ' rows')),
+  return h('section', {class:'source-table'}, h('div', {class:'result-heading'}, h('h3', {}, 'Source table'), h('span', {class:'row-count'}, plural(source.rows.length, 'row'))),
     h('div', {class:'tablewrap', tabindex:'0', role:'region', 'aria-label':'Source rows'}, resultTable(source,{limit:sourceExpanded?Infinity:4,more:false})),
     source.rows.length>4 ? h('button',{id:'source-more',class:'btn btn-ghost btn-sm','aria-expanded':String(sourceExpanded),onclick:()=>{sourceExpanded=!sourceExpanded;renderResults();}},sourceExpanded?'Show four source rows':'Show all '+source.rows.length+' source rows') : null);
 }
@@ -585,8 +586,8 @@ function renderLesson() {
   $('#dataset-note').textContent = DB_LABEL[state.db] + ' dataset · ' + sourceRows + ' synthetic ' + sourceLabel;
   $('#clause-flow').hidden = mode === 'practice';
   fill($('#clause-flow'), h('div', {}, 'FROM · ' + sourceRows + ' source rows'), h('div', {class:'flow-source', 'aria-hidden':'true'}, Array.from({length:Math.min(40,sourceRows)},()=>h('i'))),
-    h('div', {}, 'WHERE · ' + count + ' result rows'), h('div', {class:'flow-matched', 'aria-hidden':'true'}, Array.from({length:Math.min(40,count)},()=>h('i'))),
-    h('div', {}, 'SELECT · ' + (lastResult?.columns.length||0) + ' columns'), h('div', {class:'flow-columns', 'aria-hidden':'true'}, (lastResult?.columns||[]).map(()=>h('i'))),
+    h('div', {}, 'WHERE · ' + plural(count, 'result row')), h('div', {class:'flow-matched', 'aria-hidden':'true'}, Array.from({length:Math.min(40,count)},()=>h('i'))),
+    h('div', {}, 'SELECT · ' + plural(lastResult?.columns.length||0, 'column')), h('div', {class:'flow-columns', 'aria-hidden':'true'}, (lastResult?.columns||[]).map(()=>h('i'))),
     h('figcaption', {}, state.group ? 'Rows are grouped before the result is returned' : 'The query narrows rows before picking columns'));
   const practicing = mode === 'practice';
   $('.bench').classList.toggle('practice-workspace', practicing);

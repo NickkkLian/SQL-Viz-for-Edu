@@ -146,6 +146,7 @@ try {
     if (!state.open || state.focus!=='schema-graph' || state.scroll!==0 || !state.text) throw Error(JSON.stringify(state));
     return true;
   });
+  await test('the query header counts 1 join and 1 table instance in the singular', () => evaluate(`const run=sql=>{document.querySelector('#editor').value=sql;document.querySelector('#mirror .btn-primary').click();return document.querySelector('#schema-status').textContent}; const two=run('SELECT c.cust_id FROM customer c JOIN order_hdr o ON o.cust_id=c.cust_id'), one=run('SELECT cust_id FROM customer'); two.endsWith('2 table instances · 1 join') && one.endsWith('1 table instance · 0 joins')`));
   await test('a nested query runs in SQLite but explicitly declines an inaccurate diagram', () => evaluate(`document.querySelector('#editor').value='SELECT * FROM (SELECT * FROM customer)'; document.querySelector('#mirror .btn-primary').click(); document.querySelector('#schema-status').textContent.includes('Path unavailable') && document.querySelectorAll('#schema-graph .erd-active-table').length===0`));
   await test('a SQLite error clears highlights rather than implying a successful trace', () => evaluate(`document.querySelector('#editor').value='SELECT bogus FROM customer'; document.querySelector('#mirror .btn-primary').click(); !!document.querySelector('#practice-error') && document.querySelectorAll('#query-path .erd-instance').length===0`));
   await navigate('?db=movies&tables=film,director');
